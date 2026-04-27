@@ -1,60 +1,125 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
-
-const ADMIN_PW_KEY = 'tourneypro_admin_pw';
-const SESSION_KEY = 'tourneypro_session';
-const DEFAULT_PW = 'admin2026';
-
-export function getAdminPassword() {
-  return localStorage.getItem(ADMIN_PW_KEY) || DEFAULT_PW;
-}
+const GUEST_KEY = 'tourneypro_guest';
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(() => {
-    try {
-      const s = sessionStorage.getItem(SESSION_KEY);
-      return s ? JSON.parse(s) : null;
-    } catch { return null; }
-  });
+  const [supaSession, setSupaSession] = useState(null);
+  const [profile, setProfile]         = useState(null);
+  const [isGuest, setIsGuest]         = useState(false);
+  const [loading, setLoading]         = useState(true);
 
-  function loginAsUser() {
-    const s = { role: 'user', name: 'Visitante' };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    setSession(s);
+  useEffect(() => {
+    if (sessionStorage.getItem(GUEST_KEY)) setIsGuest(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSupaSession(session);
+      if (session) fetchProfile(session.user.id);
+      else setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSupaSession(session);
+      if (session) fetchProfile(session.user.id);
+      else { setProfile(null); setLoading(false); }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchProfile(userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    setProfile(data || null);
+    setLoading(false);
   }
 
-  function loginAsAdmin(password) {
-    if (password !== getAdminPassword()) {
-      return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
-    }
-    const s = { role: 'admin', name: 'Administrador' };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    setSession(s);
-    return { error: null };
+  async function signUpWithEmail(email, password, fullName) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    return { error: error?.message || null };
   }
 
-  function logout() {
-    sessionStorage.removeItem(SESSION_KEY);
-    setSession(null);
+  async function signInWithEmail(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message || null };
   }
 
-  function changePassword(currentPw, newPw) {
-    if (currentPw !== getAdminPassword()) {
-      return { error: 'La contraseña actual es incorrecta.' };
-    }
-    if (newPw.length < 4) {
-      return { error: 'La nueva contraseña debe tener al menos 4 caracteres.' };
-    }
-    localStorage.setItem(ADMIN_PW_KEY, newPw);
-    return { error: null };
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    return { error: error?.message || null };
   }
 
-  const isAdmin = session?.role === 'admin';
-  const isLoggedIn = !!session;
+  async function signInWithFacebook() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: window.location.origin },
+    });
+    return { error: error?.message || null };
+  }
+
+  function loginAsGuest() {
+    sessionStorage.setItem(GUEST_KEY, 'true');
+    setIsGuest(true);
+  }
+
+  async function logout() {
+    sessionStorage.removeItem(GUEST_KEY);
+    setIsGuest(false);
+    if (supaSession) await supabase.auth.signOut();
+    setProfile(null);
+    setSupaSession(null);
+  }
+
+  async function changePassword(newPassword) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error?.message || null };
+  }
+
+  const isAdmin    = profile?.role === 'admin';
+  const isLoggedIn = !!supaSession || isGuest;
+  const session    = supaSession
+    ? {
+        name:  profile?.full_name || supaSession.user.email?.split('@')[0],
+        email: supaSession.user.email,
+        role:  isAdmin ? 'admin' : 'user',
+      }
+    : isGuest
+    ? { name: 'Visitante', role: 'user' }
+    : null;
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: '#0f172a', flexDirection: 'column', gap: 16,
+      }}>
+        <div style={{ fontSize: '2.5rem' }}>🏆</div>
+        <div style={{ color: '#818cf8', fontWeight: 700, fontSize: '1.1rem' }}>
+          Cargando…
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={{ session, isAdmin, isLoggedIn, loginAsUser, loginAsAdmin, logout, changePassword }}>
+    <AuthContext.Provider value={{
+      session, isAdmin, isLoggedIn, isGuest,
+      user: supaSession?.user,
+      signUpWithEmail, signInWithEmail,
+      signInWithGoogle, signInWithFacebook,
+      loginAsGuest, logout, changePassword,
+    }}>
       {children}
     </AuthContext.Provider>
   );

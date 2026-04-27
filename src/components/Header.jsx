@@ -20,21 +20,25 @@ export default function Header({ currentPath, onMenuToggle }) {
 
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
-  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwForm, setPwForm] = useState({ next: '', confirm: '' });
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
 
-  function handleChangePw(e) {
+  async function handleChangePw(e) {
     e.preventDefault();
     setPwError('');
-    if (pwForm.next !== pwForm.confirm) {
-      setPwError('Las contraseñas nuevas no coinciden.');
+    if (pwForm.next.length < 6) {
+      setPwError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
-    const result = changePassword(pwForm.current, pwForm.next);
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError('Las contraseñas no coinciden.');
+      return;
+    }
+    const result = await changePassword(pwForm.next);
     if (result.error) { setPwError(result.error); return; }
     setPwSuccess(true);
-    setTimeout(() => { setShowChangePw(false); setPwSuccess(false); setPwForm({ current: '', next: '', confirm: '' }); }, 1500);
+    setTimeout(() => { setShowChangePw(false); setPwSuccess(false); setPwForm({ next: '', confirm: '' }); }, 1500);
   }
 
   return (
@@ -127,10 +131,10 @@ export default function Header({ currentPath, onMenuToggle }) {
       </header>
 
       {/* Change password modal */}
-      {showChangePw && (
+          {showChangePw && (
         <Modal
-          title="Cambiar contraseña de administrador"
-          onClose={() => { setShowChangePw(false); setPwError(''); setPwSuccess(false); setPwForm({ current: '', next: '', confirm: '' }); }}
+          title="Cambiar contraseña"
+          onClose={() => { setShowChangePw(false); setPwError(''); setPwSuccess(false); setPwForm({ next: '', confirm: '' }); }}
           footer={
             pwSuccess ? null : (
               <>
@@ -148,12 +152,8 @@ export default function Header({ currentPath, onMenuToggle }) {
           ) : (
             <form onSubmit={handleChangePw}>
               <div className="form-group">
-                <label className="form-label">Contraseña actual</label>
-                <input type="password" className="form-input" placeholder="Contraseña actual" value={pwForm.current} onChange={e => { setPwForm(f => ({ ...f, current: e.target.value })); setPwError(''); }} autoFocus />
-              </div>
-              <div className="form-group">
                 <label className="form-label">Nueva contraseña</label>
-                <input type="password" className="form-input" placeholder="Mínimo 4 caracteres" value={pwForm.next} onChange={e => { setPwForm(f => ({ ...f, next: e.target.value })); setPwError(''); }} />
+                <input type="password" className="form-input" placeholder="Mínimo 6 caracteres" value={pwForm.next} onChange={e => { setPwForm(f => ({ ...f, next: e.target.value })); setPwError(''); }} autoFocus />
               </div>
               <div className="form-group">
                 <label className="form-label">Confirmar nueva contraseña</label>

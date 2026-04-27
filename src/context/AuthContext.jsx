@@ -13,28 +13,38 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (sessionStorage.getItem(GUEST_KEY)) setIsGuest(true);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSupaSession(session);
-      if (session) fetchProfile(session.user.id);
-      else setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSupaSession(session);
+        if (session) fetchProfile(session.user.id);
+        else setLoading(false);
+      })
+      .catch(() => setLoading(false));
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setSupaSession(session);
-      if (session) fetchProfile(session.user.id);
-      else { setProfile(null); setLoading(false); }
-    });
+    let subscription;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+        setSupaSession(session);
+        if (session) fetchProfile(session.user.id);
+        else { setProfile(null); setLoading(false); }
+      });
+      subscription = data.subscription;
+    } catch { setLoading(false); }
 
-    return () => subscription.unsubscribe();
+    return () => { try { subscription?.unsubscribe(); } catch {} };
   }, []);
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    setProfile(data || null);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      setProfile(data || null);
+    } catch {
+      setProfile(null);
+    }
     setLoading(false);
   }
 

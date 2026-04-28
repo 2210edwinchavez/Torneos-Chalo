@@ -29,7 +29,10 @@ export default function Sidebar({ isOpen, onClose }) {
     <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`}>
       <div className="sidebar-logo">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1>🏆 TourneyPro</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo jc sport.png" alt="Logo" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }} />
+            <h1 style={{ margin: 0 }}>Torneos JC SPORT</h1>
+          </div>
           <button
             className="sidebar-close-btn"
             onClick={onClose}
@@ -63,9 +66,9 @@ export default function Sidebar({ isOpen, onClose }) {
               style={{
                 padding: '8px 12px',
                 marginBottom: 8,
-                background: 'rgba(99,102,241,0.08)',
+                background: 'rgba(132,204,22,0.08)',
                 borderRadius: 8,
-                border: '1px solid rgba(99,102,241,0.2)',
+                border: '1px solid rgba(132,204,22,0.2)',
               }}
             >
               <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-light)' }}>
@@ -111,7 +114,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 style={{
                   background:
                     t.id === activeTournament?.id
-                      ? 'rgba(99,102,241,0.06)'
+                      ? 'rgba(132,204,22,0.06)'
                       : undefined,
                 }}
               >
@@ -131,7 +134,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-          TourneyPro v1.0
+          Torneos JC SPORT v1.0
         </div>
       </div>
     </aside>

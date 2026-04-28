@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import { formatDate, getTeamColor } from '../utils/helpers';
 
@@ -13,6 +14,7 @@ const SPORT_ICONS = {
 const EMPTY_FORM = {
   name: '', sport: 'Fútbol', type: 'league',
   startDate: '', endDate: '', description: '', inscriptionFee: '',
+  playerLimit: '25',
   venue: '', matchFee: '', gameSystem: '', regulations: '', awards: '',
 };
 
@@ -36,6 +38,7 @@ function InfoRow({ icon, label, value }) {
 
 /* ─── Tournament Card ─── */
 function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleStatus }) {
+  const { formatMoney } = useCurrency();
   const [showInfo, setShowInfo] = useState(false);
 
   const played = t.matches.filter(m => m.status === 'finished').length;
@@ -45,13 +48,13 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
   return (
     <div
       className="card"
-      style={{ border: isActive ? '1px solid rgba(99,102,241,0.4)' : undefined, position: 'relative' }}
+      style={{ border: isActive ? '1px solid rgba(132,204,22,0.4)' : undefined, position: 'relative' }}
     >
       {isActive && (
         <span style={{
           position: 'absolute', top: 12, right: 12,
           fontSize: '0.65rem', fontWeight: 700, color: 'var(--primary-light)',
-          background: 'rgba(99,102,241,0.15)', padding: '2px 8px', borderRadius: 99,
+          background: 'rgba(132,204,22,0.15)', padding: '2px 8px', borderRadius: 99,
         }}>
           ACTIVO
         </span>
@@ -112,12 +115,12 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
         )}
         {t.inscriptionFee > 0 && (
           <span className="pill" style={{ color: 'var(--accent)', background: 'rgba(245,158,11,0.1)' }}>
-            💰 Inscripción: ${Number(t.inscriptionFee).toFixed(2)}
+            💰 Inscripción: {formatMoney(t.inscriptionFee)}
           </span>
         )}
         {t.matchFee > 0 && (
-          <span className="pill" style={{ color: 'var(--secondary)', background: 'rgba(14,165,233,0.1)' }}>
-            💵 Por partido: ${Number(t.matchFee).toFixed(2)}
+          <span className="pill" style={{ color: 'var(--secondary)', background: 'rgba(34,197,94,0.1)' }}>
+            💵 Por partido: {formatMoney(t.matchFee)}
           </span>
         )}
         {t.venue && (
@@ -142,7 +145,7 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
           {showInfo && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, padding: '14px 14px 4px', background: 'var(--bg-card2)', borderRadius: 10, border: '1px solid var(--border)' }}>
               <InfoRow icon="📍" label="Cancha / Sede" value={t.venue} />
-              <InfoRow icon="💵" label="Valor por partido" value={t.matchFee > 0 ? `$${Number(t.matchFee).toFixed(2)}` : null} />
+              <InfoRow icon="💵" label="Valor por partido" value={t.matchFee > 0 ? formatMoney(t.matchFee) : null} />
               <InfoRow icon="⚽" label="Sistema de juego" value={t.gameSystem} />
               <InfoRow icon="📜" label="Reglamento" value={t.regulations} />
               <InfoRow icon="🏅" label="Premiación" value={t.awards} />
@@ -272,6 +275,19 @@ function TournamentModal({ editId, form, setForm, onClose, onSubmit }) {
             </div>
 
             <div className="form-group">
+              <label className="form-label">👥 Límite de jugadores por equipo</label>
+              <input
+                type="number" min="1" max="100"
+                className="form-input" placeholder="25"
+                value={form.playerLimit}
+                onChange={e => setForm(f => ({ ...f, playerLimit: e.target.value }))}
+              />
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                Máximo de jugadores que se pueden inscribir por equipo. Por defecto: 25.
+              </div>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Descripción general</label>
               <textarea
                 className="form-input" rows={2}
@@ -357,6 +373,7 @@ export default function Tournaments() {
       name: t.name, sport: t.sport, type: t.type,
       startDate: t.startDate, endDate: t.endDate, description: t.description || '',
       inscriptionFee: t.inscriptionFee || '', matchFee: t.matchFee || '',
+      playerLimit: t.playerLimit || '25',
       venue: t.venue || '', gameSystem: t.gameSystem || '',
       regulations: t.regulations || '', awards: t.awards || '',
     });

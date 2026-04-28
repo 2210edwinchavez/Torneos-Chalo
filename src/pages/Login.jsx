@@ -2,14 +2,28 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithFacebook, loginAsGuest } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithFacebook, loginAsGuest, resetPassword } = useAuth();
 
-  const [mode, setMode]       = useState('login'); // 'login' | 'register'
+  const [mode, setMode]       = useState('login'); // 'login' | 'register' | 'reset'
   const [form, setForm]       = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPw, setShowPw]   = useState(false);
   const [error, setError]     = useState('');
   const [info, setInfo]       = useState('');
   const [loading, setLoading] = useState('');
+
+  const [resetEmail, setResetEmail]   = useState('');
+  const [resetSent, setResetSent]     = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  async function handleReset(e) {
+    e.preventDefault();
+    if (!resetEmail) { setError('Ingresa tu correo electrónico.'); return; }
+    setResetLoading(true); setError('');
+    const { error } = await resetPassword(resetEmail);
+    setResetLoading(false);
+    if (error) { setError(error); return; }
+    setResetSent(true);
+  }
 
   function setField(k, v) {
     setForm(f => ({ ...f, [k]: v }));
@@ -57,61 +71,196 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--bg)',
+      background: '#0a0f0a',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
     }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+      {/* Tarjeta dividida */}
+      <div style={{
+        display: 'flex',
+        width: '100%',
+        maxWidth: 860,
+        minHeight: 520,
+        borderRadius: 20,
+        overflow: 'hidden',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        border: '1px solid rgba(132,204,22,0.2)',
+      }}>
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        {/* ── Panel izquierdo: escudo ── */}
+        <div style={{
+          flex: '0 0 42%',
+          background: 'linear-gradient(160deg, #0d1f0d 0%, #0a140a 60%, #111a0a 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 32px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Decoración: círculo verde difuso de fondo */}
           <div style={{
-            width: 68, height: 68, borderRadius: '50%', margin: '0 auto 14px',
-            background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.9rem', boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
-          }}>🏆</div>
-          <h1 style={{
-            fontSize: '1.8rem', fontWeight: 800,
-            background: 'linear-gradient(135deg, var(--primary-light), var(--secondary))',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            marginBottom: 4,
-          }}>TourneyPro</h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plataforma de gestión de torneos</p>
+            position: 'absolute', width: 320, height: 320, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(132,204,22,0.12) 0%, transparent 70%)',
+            top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Líneas de campo decorativas */}
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.06,
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(132,204,22,0.8) 28px, rgba(132,204,22,0.8) 29px)',
+            pointerEvents: 'none',
+          }} />
+
+          <img
+            src="/logo jc sport.png"
+            alt="Torneos JC SPORT"
+            style={{
+              width: 180, height: 180, objectFit: 'contain',
+              position: 'relative', zIndex: 1,
+              filter: 'drop-shadow(0 8px 32px rgba(132,204,22,0.35))',
+            }}
+          />
+          <h2 style={{
+            marginTop: 20, marginBottom: 6, fontSize: '1.25rem', fontWeight: 800,
+            color: '#84cc16', letterSpacing: '0.05em', textAlign: 'center',
+            position: 'relative', zIndex: 1,
+          }}>TORNEOS JC SPORT</h2>
+          <p style={{
+            fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center',
+            position: 'relative', zIndex: 1, letterSpacing: '0.08em',
+          }}>PLATAFORMA DE GESTIÓN</p>
+
+          {/* Acento verde inferior */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4,
+            background: 'linear-gradient(90deg, transparent, #84cc16, transparent)',
+          }} />
         </div>
 
-        {/* Card */}
+        {/* ── Panel derecho: formulario ── */}
         <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 16, padding: '28px 24px',
+          flex: 1,
+          background: '#111713',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '40px 36px',
+          overflowY: 'auto',
         }}>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 4 }}>
+            {mode === 'reset' ? 'Recuperar contraseña' : mode === 'login' ? 'Bienvenido de nuevo' : 'Crear cuenta'}
+          </h3>
+          <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>
+            {mode === 'reset' ? 'Te enviaremos un enlace para restablecer tu contraseña' : mode === 'login' ? 'Ingresa tus credenciales para continuar' : 'Completa los datos para registrarte'}
+          </p>
 
-          {/* Tabs */}
-          <div style={{
-            display: 'flex', background: 'rgba(0,0,0,0.2)',
-            borderRadius: 10, padding: 4, marginBottom: 24,
-          }}>
-            {['login', 'register'].map(m => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setError(''); setInfo(''); }}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
-                  fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  background: mode === m ? 'var(--primary)' : 'transparent',
-                  color: mode === m ? '#fff' : 'var(--text-muted)',
-                }}
-              >
-                {m === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
-              </button>
-            ))}
-          </div>
+          {/* Tabs — solo cuando no es modo reset */}
+          {mode !== 'reset' && (
+            <div style={{
+              display: 'flex', background: 'rgba(0,0,0,0.35)',
+              borderRadius: 10, padding: 4, marginBottom: 24,
+              border: '1px solid rgba(132,204,22,0.15)',
+            }}>
+              {['login', 'register'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setError(''); setInfo(''); }}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 7, border: 'none',
+                    fontWeight: 600, fontSize: '0.83rem', cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: mode === m ? '#84cc16' : 'transparent',
+                    color: mode === m ? '#0a0f0a' : 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  {m === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit}>
+          {/* ── Formulario de recuperación de contraseña ── */}
+          {mode === 'reset' && (
+            <div>
+              {resetSent ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: 16 }}>📧</div>
+                  <div style={{ fontWeight: 700, color: '#84cc16', fontSize: '1rem', marginBottom: 8 }}>
+                    ¡Correo enviado!
+                  </div>
+                  <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.5)', marginBottom: 24, lineHeight: 1.6 }}>
+                    Revisa tu bandeja de entrada en <strong style={{ color: '#f1f5f9' }}>{resetEmail}</strong> y sigue el enlace para restablecer tu contraseña.
+                  </p>
+                  <button
+                    onClick={() => { setMode('login'); setResetSent(false); setResetEmail(''); setError(''); }}
+                    style={{
+                      width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+                      background: '#84cc16', color: '#0a0f0a', fontWeight: 800,
+                      fontSize: '0.92rem', cursor: 'pointer',
+                    }}
+                  >
+                    ← Volver al inicio de sesión
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleReset}>
+                  <div className="form-group">
+                    <label className="form-label">Correo electrónico</label>
+                    <input
+                      className="form-input"
+                      type="email"
+                      placeholder="correo@ejemplo.com"
+                      value={resetEmail}
+                      onChange={e => { setResetEmail(e.target.value); setError(''); }}
+                      autoFocus
+                    />
+                  </div>
+
+                  {error && (
+                    <div style={{
+                      padding: '10px 14px', borderRadius: 8, marginBottom: 14,
+                      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                      color: 'var(--danger)', fontSize: '0.82rem',
+                    }}>⚠️ {error}</div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    style={{
+                      width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+                      background: resetLoading ? 'rgba(132,204,22,0.5)' : '#84cc16',
+                      color: '#0a0f0a', fontWeight: 800, fontSize: '0.92rem',
+                      cursor: resetLoading ? 'not-allowed' : 'pointer', marginBottom: 14,
+                    }}
+                  >
+                    {resetLoading ? 'Enviando…' : '→ Enviar enlace de recuperación'}
+                  </button>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setMode('login'); setError(''); setResetEmail(''); }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem',
+                        textDecoration: 'underline', textDecorationStyle: 'dotted',
+                      }}
+                    >
+                      ← Volver al inicio de sesión
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ── Form normal (login / register) ── */}
+          {mode !== 'reset' && <form onSubmit={handleSubmit}>
             {mode === 'register' && (
               <div className="form-group">
                 <label className="form-label">Nombre completo</label>
@@ -185,47 +334,69 @@ export default function Login() {
             {info && (
               <div style={{
                 padding: '10px 14px', borderRadius: 8, marginBottom: 14,
-                background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-                color: 'var(--success)', fontSize: '0.82rem',
+                background: 'rgba(132,204,22,0.1)', border: '1px solid rgba(132,204,22,0.3)',
+                color: '#84cc16', fontSize: '0.82rem',
               }}>{info}</div>
             )}
 
             <button
               type="submit"
-              className="btn btn-primary w-full"
               disabled={!!loading}
-              style={{ justifyContent: 'center', padding: '11px 0', fontSize: '0.95rem' }}
+              style={{
+                width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+                background: loading ? 'rgba(132,204,22,0.5)' : '#84cc16',
+                color: '#0a0f0a', fontWeight: 800, fontSize: '0.95rem',
+                cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                letterSpacing: '0.03em',
+              }}
             >
               {loading === 'email'
                 ? (mode === 'login' ? 'Ingresando…' : 'Creando cuenta…')
                 : (mode === 'login' ? '→ Iniciar sesión' : '→ Crear cuenta')}
             </button>
-          </form>
 
-          {/* Divider */}
-          <div style={{
+            {/* Enlace olvidé contraseña — solo en login */}
+            {mode === 'login' && (
+              <div style={{ textAlign: 'right', marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => { setMode('reset'); setError(''); setInfo(''); }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#84cc16', fontSize: '0.78rem', fontWeight: 600,
+                    textDecoration: 'underline', textDecorationStyle: 'dotted',
+                  }}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+            )}
+          </form>}
+
+          {/* Divider y social — solo en login/register */}
+          {mode !== 'reset' && <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            margin: '20px 0', color: 'var(--text-muted)', fontSize: '0.8rem',
+            margin: '18px 0', color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem',
           }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
             o continúa con
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          </div>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          </div>}
 
-          {/* Social buttons */}
-          <div style={{ display: 'flex', gap: 10 }}>
+          {mode !== 'reset' && <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
             <button
               onClick={handleGoogle}
               disabled={!!loading}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)',
-                background: loading === 'google' ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-                color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer',
+                padding: '10px 0', borderRadius: 9,
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.04)',
+                color: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 48 48">
+              <svg width="17" height="17" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
@@ -239,32 +410,33 @@ export default function Login() {
               disabled={!!loading}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)',
-                background: loading === 'facebook' ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-                color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer',
+                padding: '10px 0', borderRadius: 9,
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.04)',
+                color: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
               </svg>
               {loading === 'facebook' ? '…' : 'Facebook'}
             </button>
-          </div>
-        </div>
+          </div>}
 
-        {/* Guest access */}
-        <div style={{ textAlign: 'center', marginTop: 20 }}>
-          <button
-            onClick={loginAsGuest}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text-muted)', fontSize: '0.82rem',
-              textDecoration: 'underline', textDecorationStyle: 'dotted',
-            }}
-          >
-            Entrar como visitante (solo lectura)
-          </button>
+          {/* Guest access */}
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={loginAsGuest}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem',
+                textDecoration: 'underline', textDecorationStyle: 'dotted',
+              }}
+            >
+              Entrar como visitante (solo lectura)
+            </button>
+          </div>
         </div>
       </div>
     </div>

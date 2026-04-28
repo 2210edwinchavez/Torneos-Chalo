@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTournament } from '../context/TournamentContext';
+import { useCurrency, CURRENCIES } from '../context/CurrencyContext';
 import Modal from './Modal';
 
 const PAGE_INFO = {
@@ -16,7 +17,8 @@ const PAGE_INFO = {
 export default function Header({ currentPath, onMenuToggle }) {
   const { activeTournament } = useTournament();
   const { session, isAdmin, logout, changePassword } = useAuth();
-  const info = PAGE_INFO[currentPath] || { title: 'TourneyPro', subtitle: '' };
+  const { currency, setCurrency } = useCurrency();
+  const info = PAGE_INFO[currentPath] || { title: 'Torneos JC SPORT', subtitle: '' };
 
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
@@ -59,6 +61,27 @@ export default function Header({ currentPath, onMenuToggle }) {
         </div>
 
         <div className="header-actions">
+          {/* Selector de moneda */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {Object.values(CURRENCIES).map(c => (
+              <button
+                key={c.code}
+                onClick={() => setCurrency(c.code)}
+                title={c.label}
+                style={{
+                  padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 700,
+                  background: currency === c.code ? 'rgba(132,204,22,0.2)' : 'rgba(255,255,255,0.05)',
+                  color: currency === c.code ? 'var(--primary-light)' : 'var(--text-muted)',
+                  outline: currency === c.code ? '1px solid rgba(132,204,22,0.4)' : '1px solid transparent',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {c.flag} {c.code}
+              </button>
+            ))}
+          </div>
+
           {activeTournament && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeTournament.status === 'active' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block' }} />
@@ -75,8 +98,8 @@ export default function Header({ currentPath, onMenuToggle }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '6px 12px', borderRadius: 8,
-                background: isAdmin ? 'rgba(99,102,241,0.12)' : 'rgba(14,165,233,0.1)',
-                border: `1px solid ${isAdmin ? 'rgba(99,102,241,0.3)' : 'rgba(14,165,233,0.25)'}`,
+                background: isAdmin ? 'rgba(132,204,22,0.12)' : 'rgba(34,197,94,0.1)',
+                border: `1px solid ${isAdmin ? 'rgba(132,204,22,0.3)' : 'rgba(34,197,94,0.25)'}`,
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >

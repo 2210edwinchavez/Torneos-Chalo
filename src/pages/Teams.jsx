@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament, findPlayerEnrollment, getPaymentStatus } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import { getTeamColor, getInitials, formatDate } from '../utils/helpers';
 
@@ -42,7 +43,7 @@ function ShieldUpload({ value, onChange, required }) {
           padding: value ? 16 : 28,
           borderRadius: 12,
           border: `2px ${value ? 'solid' : 'dashed'} ${value ? 'var(--primary)' : required ? 'rgba(245,158,11,0.6)' : 'var(--border)'}`,
-          background: value ? 'rgba(99,102,241,0.06)' : 'var(--bg-card2)',
+          background: value ? 'rgba(132,204,22,0.06)' : 'var(--bg-card2)',
           cursor: 'pointer',
           transition: 'all 0.2s',
           position: 'relative',
@@ -106,6 +107,7 @@ function ShieldUpload({ value, onChange, required }) {
 
 /* ─── Payment Modal ─── */
 function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee, onClose, dispatch }) {
+  const { formatMoney } = useCurrency();
   const payment = enrollment.payment;
   const status = getPaymentStatus(payment);
 
@@ -138,7 +140,7 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
         </div>
         <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
           <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
-            ${payment.totalAmount.toFixed(2)}
+            {formatMoney(payment.totalAmount)}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Total inscripción</div>
         </div>
@@ -173,7 +175,7 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
           ) : (
             <div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-                ${payment.totalAmount.toFixed(2)}
+                {formatMoney(payment.totalAmount)}
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14 }}>Pago único de contado</div>
               <button className="btn btn-success btn-lg w-full" onClick={payCash}>
@@ -216,7 +218,7 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
                 )}
               </div>
               <div style={{ fontWeight: 800, fontSize: '1rem', color: inst.paid ? 'var(--success)' : 'var(--text-primary)' }}>
-                ${inst.amount.toFixed(2)}
+                {formatMoney(inst.amount)}
               </div>
               {!inst.paid && (
                 <button
@@ -275,6 +277,11 @@ function PhotoUploadInline({ value, onChange }) {
 
 /* ─── Enroll Modal ─── */
 function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }) {
+  const { formatMoney } = useCurrency();
+  const playerLimit = tournament.playerLimit || 25;
+  const enrollments = team.enrollments || [];
+  const isFull = enrollments.length >= playerLimit;
+
   // step: 'search' | 'details' | 'create'
   const [step, setStep] = useState('search');
   const [search, setSearch] = useState('');
@@ -288,7 +295,6 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
   });
 
   const inscriptionFee = tournament.inscriptionFee || 0;
-  const fee3 = inscriptionFee > 0 ? (inscriptionFee / 3).toFixed(2) : '0.00';
 
   // Build player status relative to this tournament
   const enrolledInTournament = new Map(); // playerId → teamName
@@ -384,6 +390,24 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
       {/* ── STEP: Search ── */}
       {step === 'search' && (
         <div>
+          {/* Cupo restante */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', borderRadius: 8, marginBottom: 12,
+            background: isFull ? 'rgba(239,68,68,0.08)' : enrollments.length / playerLimit > 0.8 ? 'rgba(245,158,11,0.08)' : 'rgba(132,204,22,0.06)',
+            border: `1px solid ${isFull ? 'rgba(239,68,68,0.3)' : enrollments.length / playerLimit > 0.8 ? 'rgba(245,158,11,0.3)' : 'rgba(132,204,22,0.2)'}`,
+          }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              👥 Cupo del equipo
+            </span>
+            <span style={{
+              fontSize: '0.8rem', fontWeight: 800,
+              color: isFull ? 'var(--danger)' : enrollments.length / playerLimit > 0.8 ? 'var(--warning)' : 'var(--primary-light)',
+            }}>
+              {enrollments.length} / {playerLimit} {isFull ? '— COMPLETO' : `(${playerLimit - enrollments.length} disponibles)`}
+            </span>
+          </div>
+
           {/* Search bar */}
           <div className="search-bar" style={{ marginBottom: 6 }}>
             <span className="search-icon">🔍</span>
@@ -495,7 +519,7 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
               <div style={{
                 padding: '14px 16px', borderRadius: 10,
                 border: '1px dashed var(--primary)',
-                background: 'rgba(99,102,241,0.05)',
+                background: 'rgba(132,204,22,0.05)',
               }}>
                 <div style={{ fontWeight: 600, color: 'var(--primary-light)', marginBottom: 4, fontSize: '0.875rem' }}>
                   ¿No encuentras al jugador?
@@ -548,7 +572,6 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
 
           <PaymentStep
             inscriptionFee={inscriptionFee}
-            fee3={fee3}
             shirtNumber={shirtNumber}
             setShirtNumber={setShirtNumber}
             paymentType={paymentType}
@@ -560,7 +583,7 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
       {/* ── STEP: Create new player ── */}
       {step === 'create' && (
         <div>
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14, padding: '8px 12px', background: 'rgba(99,102,241,0.06)', borderRadius: 8, borderLeft: '3px solid var(--primary)' }}>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14, padding: '8px 12px', background: 'rgba(132,204,22,0.06)', borderRadius: 8, borderLeft: '3px solid var(--primary)' }}>
             El jugador se creará en el registro global y quedará inscrito en <strong style={{ color: 'var(--primary-light)' }}>{team.name}</strong>.
           </div>
 
@@ -602,7 +625,6 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
 
           <PaymentStep
             inscriptionFee={inscriptionFee}
-            fee3={fee3}
             shirtNumber={shirtNumber}
             setShirtNumber={setShirtNumber}
             paymentType={paymentType}
@@ -615,7 +637,10 @@ function EnrollModal({ team, tournament, globalPlayers = [], onClose, dispatch }
 }
 
 /* ─── Shared Payment Step ─── */
-function PaymentStep({ inscriptionFee, fee3, shirtNumber, setShirtNumber, paymentType, setPaymentType }) {
+function PaymentStep({ inscriptionFee, shirtNumber, setShirtNumber, paymentType, setPaymentType }) {
+  const { formatMoney } = useCurrency();
+  const fee3 = inscriptionFee > 0 ? inscriptionFee / 3 : 0;
+
   return (
     <>
       <div className="form-group">
@@ -628,7 +653,7 @@ function PaymentStep({ inscriptionFee, fee3, shirtNumber, setShirtNumber, paymen
         <label className="form-label">Modalidad de pago de inscripción</label>
         {inscriptionFee > 0 && (
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10 }}>
-            Cuota del torneo: <strong style={{ color: 'var(--accent)' }}>${inscriptionFee.toFixed(2)}</strong> por jugador
+            Cuota del torneo: <strong style={{ color: 'var(--accent)' }}>{formatMoney(inscriptionFee)}</strong> por jugador
           </div>
         )}
 
@@ -647,7 +672,7 @@ function PaymentStep({ inscriptionFee, fee3, shirtNumber, setShirtNumber, paymen
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 800, fontSize: '1.1rem', color: paymentType === 'cash' ? 'var(--success)' : 'var(--text-primary)' }}>
-                ${inscriptionFee.toFixed(2)}
+                {formatMoney(inscriptionFee)}
               </div>
             </div>
             {paymentType === 'cash' && <span style={{ color: 'var(--success)', fontSize: '1.3rem' }}>✓</span>}
@@ -657,19 +682,19 @@ function PaymentStep({ inscriptionFee, fee3, shirtNumber, setShirtNumber, paymen
           <button type="button" onClick={() => setPaymentType('installments3')} style={{
             display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 10,
             border: `2px solid ${paymentType === 'installments3' ? 'var(--primary)' : 'var(--border)'}`,
-            background: paymentType === 'installments3' ? 'rgba(99,102,241,0.07)' : 'var(--bg-card2)',
+            background: paymentType === 'installments3' ? 'rgba(132,204,22,0.07)' : 'var(--bg-card2)',
             cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%',
           }}>
             <span style={{ fontSize: '1.8rem' }}>📆</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>Pago en 3 cuotas</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                {inscriptionFee > 0 ? <>3 pagos de <strong style={{ color: 'var(--primary-light)' }}>${fee3}</strong> cada uno</> : '3 pagos iguales'}
+                {inscriptionFee > 0 ? <>3 pagos de <strong style={{ color: 'var(--primary-light)' }}>{formatMoney(fee3)}</strong> cada uno</> : '3 pagos iguales'}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 800, fontSize: '0.95rem', color: paymentType === 'installments3' ? 'var(--primary-light)' : 'var(--text-primary)' }}>
-                3 × ${fee3}
+                3 × {formatMoney(fee3)}
               </div>
             </div>
             {paymentType === 'installments3' && <span style={{ color: 'var(--primary)', fontSize: '1.3rem' }}>✓</span>}
@@ -758,6 +783,8 @@ function TeamCard({ team, tournament, dispatch }) {
 
   const color = getTeamColor(team.colorIndex);
   const enrollments = team.enrollments || [];
+  const playerLimit = tournament.playerLimit || 25;
+  const isFull = enrollments.length >= playerLimit;
 
   const stats = (() => {
     const ms = tournament.matches.filter(m => m.status === 'finished' && (m.homeId === team.id || m.awayId === team.id));
@@ -842,9 +869,14 @@ function TeamCard({ team, tournament, dispatch }) {
         >
           <span>
             👥 Jugadores
-            <span style={{ marginLeft: 8, background: color + '33', color, borderRadius: 99, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
-              {enrollments.length}
+            <span style={{
+              marginLeft: 8, borderRadius: 99, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700,
+              background: isFull ? 'rgba(239,68,68,0.15)' : color + '33',
+              color: isFull ? 'var(--danger)' : color,
+            }}>
+              {enrollments.length}/{playerLimit}
             </span>
+            {isFull && <span style={{ marginLeft: 6, fontSize: '0.68rem', color: 'var(--danger)', fontWeight: 700 }}>COMPLETO</span>}
           </span>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{showPlayers ? '▲' : '▼'}</span>
         </button>
@@ -852,6 +884,25 @@ function TeamCard({ team, tournament, dispatch }) {
         {/* Players panel */}
         {showPlayers && (
           <div className="players-panel">
+            {/* Barra de progreso del límite */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>
+                <span>Cupo del equipo</span>
+                <span style={{ fontWeight: 700, color: isFull ? 'var(--danger)' : 'var(--text-secondary)' }}>
+                  {enrollments.length} / {playerLimit} jugadores
+                </span>
+              </div>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min((enrollments.length / playerLimit) * 100, 100)}%`,
+                  background: isFull ? 'var(--danger)' : enrollments.length / playerLimit > 0.8 ? 'var(--warning)' : 'var(--primary)',
+                  borderRadius: 99,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+
             {enrollments.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '14px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                 Sin jugadores inscritos aún
@@ -876,9 +927,19 @@ function TeamCard({ team, tournament, dispatch }) {
               </div>
             )}
             {isAdmin && (
-              <button className="btn btn-primary w-full" onClick={() => setShowEnroll(true)}>
-                + Inscribir jugador
-              </button>
+              isFull ? (
+                <div style={{
+                  textAlign: 'center', padding: '10px 14px', borderRadius: 8,
+                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                  color: 'var(--danger)', fontSize: '0.82rem', fontWeight: 600,
+                }}>
+                  🔒 Equipo completo — límite de {playerLimit} jugadores alcanzado
+                </div>
+              ) : (
+                <button className="btn btn-primary w-full" onClick={() => setShowEnroll(true)}>
+                  + Inscribir jugador
+                </button>
+              )
             )}
           </div>
         )}
@@ -921,6 +982,7 @@ function TeamCard({ team, tournament, dispatch }) {
 export default function Teams() {
   const { activeTournament, dispatch } = useTournament();
   const { isAdmin } = useAuth();
+  const { formatMoney: formatMoneyTeams } = useCurrency();
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM_FORM);
   const [search, setSearch] = useState('');
@@ -981,7 +1043,7 @@ export default function Teams() {
         <div className="card mb-24" style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: '3px solid var(--accent)' }}>
           <span style={{ fontSize: '1.2rem' }}>💰</span>
           <div>
-            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Cuota de inscripción: ${activeTournament.inscriptionFee.toFixed(2)}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Cuota de inscripción: {formatMoneyTeams(activeTournament.inscriptionFee)}</span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: 10 }}>por jugador · contado o 3 cuotas</span>
           </div>
         </div>

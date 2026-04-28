@@ -75,13 +75,84 @@ export default function Dashboard() {
 
   if (state.tournaments.length === 0) {
     return (
-      <div className="empty-state" style={{ marginTop: 80 }}>
-        <div className="empty-state-icon">🏆</div>
-        <h3>Bienvenido a TourneyPro</h3>
-        <p>Aún no tienes torneos. Crea tu primer torneo para comenzar.</p>
-        <Link to="/torneos" className="btn btn-primary" style={{ marginTop: 20 }}>
-          + Crear primer torneo
-        </Link>
+      <div style={{
+        position: 'fixed', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {/* Fondo cancha */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(180deg, #1a4a1a 0%, #1e5c1e 25%, #226622 50%, #1e5c1e 75%, #1a4a1a 100%)',
+        }} />
+
+        {/* Franjas de césped */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(0,0,0,0.08) 60px, rgba(0,0,0,0.08) 120px)',
+        }} />
+
+        {/* Líneas blancas de la cancha */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.18 }} viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+          {/* Borde cancha */}
+          <rect x="60" y="40" width="880" height="520" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Línea central */}
+          <line x1="500" y1="40" x2="500" y2="560" stroke="white" strokeWidth="3"/>
+          {/* Círculo central */}
+          <circle cx="500" cy="300" r="80" fill="none" stroke="white" strokeWidth="3"/>
+          <circle cx="500" cy="300" r="4" fill="white"/>
+          {/* Área grande izquierda */}
+          <rect x="60" y="170" width="130" height="260" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Área pequeña izquierda */}
+          <rect x="60" y="230" width="55" height="140" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Área grande derecha */}
+          <rect x="810" y="170" width="130" height="260" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Área pequeña derecha */}
+          <rect x="885" y="230" width="55" height="140" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Semicírculo área izquierda */}
+          <path d="M 190 240 A 80 80 0 0 1 190 360" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Semicírculo área derecha */}
+          <path d="M 810 240 A 80 80 0 0 0 810 360" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Punto penal izquierdo */}
+          <circle cx="145" cy="300" r="4" fill="white"/>
+          {/* Punto penal derecho */}
+          <circle cx="855" cy="300" r="4" fill="white"/>
+          {/* Porterías */}
+          <rect x="40" y="258" width="20" height="84" fill="none" stroke="white" strokeWidth="3"/>
+          <rect x="940" y="258" width="20" height="84" fill="none" stroke="white" strokeWidth="3"/>
+          {/* Esquinas */}
+          <path d="M 60 40 Q 75 40 75 55" fill="none" stroke="white" strokeWidth="2"/>
+          <path d="M 940 40 Q 925 40 925 55" fill="none" stroke="white" strokeWidth="2"/>
+          <path d="M 60 560 Q 75 560 75 545" fill="none" stroke="white" strokeWidth="2"/>
+          <path d="M 940 560 Q 925 560 925 545" fill="none" stroke="white" strokeWidth="2"/>
+        </svg>
+
+        {/* Overlay oscuro para legibilidad */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(0,0,0,0.45)',
+        }} />
+
+        {/* Contenido */}
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <img
+            src="/logo jc sport.png"
+            alt="Torneos JC SPORT"
+            style={{
+              width: 130, height: 130, objectFit: 'contain', marginBottom: 20,
+              filter: 'drop-shadow(0 8px 32px rgba(132,204,22,0.5))',
+            }}
+          />
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 8 }}>
+            Bienvenido a Torneos JC SPORT
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 24, fontSize: '0.95rem' }}>
+            Aún no tienes torneos. Crea tu primer torneo para comenzar.
+          </p>
+          <Link to="/torneos" className="btn btn-primary" style={{ fontSize: '1rem', padding: '12px 28px' }}>
+            + Crear primer torneo
+          </Link>
+        </div>
       </div>
     );
   }
@@ -111,10 +182,10 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#f1f5f9' }}
-                  cursor={{ fill: 'rgba(99,102,241,0.08)' }}
+                  contentStyle={{ background: '#111713', border: '1px solid #1e2d1a', borderRadius: 8, color: '#f1f5f9' }}
+                  cursor={{ fill: 'rgba(132,204,22,0.08)' }}
                 />
-                <Bar dataKey="equipos" name="Equipos" fill="#6366f1" radius={[4,4,0,0]} />
+                <Bar dataKey="equipos" name="Equipos" fill="#84cc16" radius={[4,4,0,0]} />
                 <Bar dataKey="jugados" name="Jugados" fill="#10b981" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -142,8 +213,8 @@ export default function Dashboard() {
                   gap: 12,
                   padding: '10px 12px',
                   borderRadius: 8,
-                  border: `1px solid ${t.id === activeTournament?.id ? 'rgba(99,102,241,0.4)' : 'var(--border)'}`,
-                  background: t.id === activeTournament?.id ? 'rgba(99,102,241,0.08)' : 'var(--bg-card2)',
+                  border: `1px solid ${t.id === activeTournament?.id ? 'rgba(132,204,22,0.4)' : 'var(--border)'}`,
+                  background: t.id === activeTournament?.id ? 'rgba(132,204,22,0.08)' : 'var(--bg-card2)',
                   cursor: 'pointer',
                   width: '100%',
                   textAlign: 'left',

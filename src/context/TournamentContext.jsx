@@ -114,6 +114,7 @@ function reducer(state, action) {
         endDate: p.endDate || '',
         description: p.description || '',
         inscriptionFee: Number(p.inscriptionFee) || 0,
+        playerLimit: Number(p.playerLimit) || 25,
         // Extended info
         venue: p.venue || '',
         matchFee: Number(p.matchFee) || 0,
@@ -342,7 +343,7 @@ function reducer(state, action) {
 
 function getLocalState() {
   try {
-    const saved = localStorage.getItem('tourneypro_v2');
+    const saved = localStorage.getItem('torneosjcsport_v2');
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -352,7 +353,7 @@ function getLocalState() {
         tournaments: Array.isArray(parsed.tournaments) ? parsed.tournaments : [],
       };
     }
-    const v1 = localStorage.getItem('tourneypro_v1');
+    const v1 = localStorage.getItem('torneosjcsport_v1');
     if (v1) {
       const old = JSON.parse(v1);
       return {
@@ -402,7 +403,7 @@ export function TournamentProvider({ children }) {
   /* Save to Supabase and localStorage after every state change (debounced 800ms) */
   useEffect(() => {
     if (!dbReady) return;
-    localStorage.setItem('tourneypro_v2', JSON.stringify(state));
+    localStorage.setItem('torneosjcsport_v2', JSON.stringify(state));
     const timer = setTimeout(() => {
       saveStateToDB(state);
     }, 800);
@@ -420,11 +421,11 @@ export function TournamentProvider({ children }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         height: '100vh', background: 'var(--bg)', flexDirection: 'column', gap: 16,
       }}>
-        <div style={{ fontSize: '2.5rem' }}>🏆</div>
+        <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain' }} />
         <div style={{ color: 'var(--primary-light)', fontWeight: 700, fontSize: '1.1rem' }}>
           Conectando con la base de datos…
         </div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>TourneyPro</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Torneos JC SPORT</div>
       </div>
     );
   }

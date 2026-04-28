@@ -5,35 +5,35 @@
 }
 
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --primary-light: #818cf8;
-  --secondary: #0ea5e9;
+  --primary: #84cc16;
+  --primary-dark: #65a30d;
+  --primary-light: #a3e635;
+  --secondary: #22c55e;
   --accent: #f59e0b;
-  --success: #10b981;
+  --success: #84cc16;
   --danger: #ef4444;
   --warning: #f59e0b;
 
-  --bg: #0f172a;
-  --bg-card: #1e293b;
-  --bg-card2: #263248;
-  --bg-input: #1e293b;
-  --border: #334155;
+  --bg: #0a0f0a;
+  --bg-card: #111713;
+  --bg-card2: #161c14;
+  --bg-input: #111713;
+  --border: #1e2d1a;
 
   --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #a1b89a;
+  --text-muted: #5a7353;
 
   --sidebar-w: 240px;
   --header-h: 64px;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--bg);
+  background: #1a4a1a;
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.5;
@@ -103,10 +103,7 @@ input, select, textarea {
 .sidebar-logo h1 {
   font-size: 1.25rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
 }
 
 .sidebar-logo span {
@@ -154,9 +151,9 @@ input, select, textarea {
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(14,165,233,0.1));
+  background: rgba(132,204,22,0.12);
   color: var(--primary-light);
-  border: 1px solid rgba(99,102,241,0.25);
+  border: 1px solid rgba(132,204,22,0.25);
 }
 
 .nav-item .nav-icon {
@@ -173,7 +170,7 @@ input, select, textarea {
   left: var(--sidebar-w);
   right: 0;
   height: var(--header-h);
-  background: rgba(15,23,42,0.85);
+  background: rgba(10,15,10,0.88);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -287,10 +284,11 @@ input, select, textarea {
 
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: #0a0f0a;
+  font-weight: 700;
 }
 
-.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:hover { background: var(--primary-light); }
 
 .btn-secondary {
   background: var(--bg-card2);
@@ -359,7 +357,7 @@ input, select, textarea {
 .form-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  box-shadow: 0 0 0 3px rgba(132,204,22,0.12);
 }
 
 .form-input::placeholder { color: var(--text-muted); }
@@ -455,9 +453,9 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 }
 
 .badge-league {
-  background: rgba(99,102,241,0.15);
+  background: rgba(132,204,22,0.15);
   color: var(--primary-light);
-  border: 1px solid rgba(99,102,241,0.3);
+  border: 1px solid rgba(132,204,22,0.3);
 }
 
 .badge-knockout {
@@ -820,7 +818,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   border-radius: var(--radius-sm);
   font-size: 0.72rem;
   font-weight: 600;
-  background: rgba(99,102,241,0.15);
+  background: rgba(132,204,22,0.15);
   color: var(--primary-light);
 }
 
@@ -902,7 +900,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 
 .photo-upload-area:hover {
   border-color: var(--primary);
-  background: rgba(99,102,241,0.05);
+  background: rgba(132,204,22,0.05);
 }
 
 .photo-upload-area.has-photo {
@@ -949,8 +947,8 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   gap: 5px;
   width: 38px;
   height: 38px;
-  background: rgba(99,102,241,0.1);
-  border: 1px solid rgba(99,102,241,0.25);
+  background: rgba(132,204,22,0.1);
+  border: 1px solid rgba(132,204,22,0.25);
   border-radius: 8px;
   padding: 0;
   flex-shrink: 0;

@@ -25,6 +25,25 @@ export default function Header({ currentPath, onMenuToggle }) {
   const [pwForm, setPwForm] = useState({ next: '', confirm: '' });
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  async function handleShare() {
+    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const shareData = {
+      title: 'Torneos JC SPORT',
+      text: '¡Únete a la plataforma de gestión de torneos JC SPORT! Consulta equipos, jugadores, partidos y tabla de posiciones.',
+      url: appUrl,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(appUrl);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2500);
+      } catch {}
+    }
+  }
 
   async function handleChangePw(e) {
     e.preventDefault();
@@ -90,6 +109,44 @@ export default function Header({ currentPath, onMenuToggle }) {
               </span>
             </div>
           )}
+
+          {/* Share button */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={handleShare}
+              title="Compartir plataforma"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(132,204,22,0.25)',
+                background: shareCopied ? 'rgba(132,204,22,0.2)' : 'rgba(255,255,255,0.05)',
+                cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
+              }}
+            >
+              {shareCopied ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#84cc16" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              )}
+            </button>
+            {shareCopied && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                background: 'var(--bg-card)', border: '1px solid rgba(132,204,22,0.3)',
+                borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap',
+                fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-light)',
+                boxShadow: 'var(--shadow)', zIndex: 300,
+                animation: 'modalIn 0.15s ease',
+              }}>
+                ✓ ¡Enlace copiado!
+              </div>
+            )}
+          </div>
 
           {/* Role badge + user menu */}
           <div style={{ position: 'relative' }}>

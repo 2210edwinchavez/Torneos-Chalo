@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithFacebook, loginAsGuest, resetPassword } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, loginAsGuest, resetPassword } = useAuth();
 
   const [mode, setMode]       = useState('login'); // 'login' | 'register' | 'reset'
   const [form, setForm]       = useState({ name: '', email: '', password: '', confirm: '' });
@@ -62,45 +62,13 @@ export default function Login() {
     if (error) { setError(error); setLoading(''); }
   }
 
-  async function handleFacebook() {
-    setLoading('facebook'); setError('');
-    const { error } = await signInWithFacebook();
-    if (error) { setError(error); setLoading(''); }
-  }
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#0a0f0a',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-    }}>
+    <div className="login-page">
       {/* Tarjeta dividida */}
-      <div style={{
-        display: 'flex',
-        width: '100%',
-        maxWidth: 860,
-        minHeight: 520,
-        borderRadius: 20,
-        overflow: 'hidden',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-        border: '1px solid rgba(132,204,22,0.2)',
-      }}>
+      <div className="login-card">
 
-        {/* ── Panel izquierdo: escudo ── */}
-        <div style={{
-          flex: '0 0 42%',
-          background: 'linear-gradient(160deg, #0d1f0d 0%, #0a140a 60%, #111a0a 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px 32px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
+        {/* ── Panel izquierdo: solo en desktop ── */}
+        <div className="login-left">
           {/* Decoración: círculo verde difuso de fondo */}
           <div style={{
             position: 'absolute', width: 320, height: 320, borderRadius: '50%',
@@ -142,15 +110,15 @@ export default function Login() {
         </div>
 
         {/* ── Panel derecho: formulario ── */}
-        <div style={{
-          flex: 1,
-          background: '#111713',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '40px 36px',
-          overflowY: 'auto',
-        }}>
+        <div className="login-right">
+
+          {/* Logo compacto — solo en móvil */}
+          <div className="login-mobile-logo">
+            <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(132,204,22,0.4))' }} />
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#84cc16', letterSpacing: '0.05em' }}>TORNEOS JC SPORT</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>PLATAFORMA DE GESTIÓN</div>
+          </div>
+
           <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 4 }}>
             {mode === 'reset' ? 'Recuperar contraseña' : mode === 'login' ? 'Bienvenido de nuevo' : 'Crear cuenta'}
           </h3>
@@ -383,12 +351,12 @@ export default function Login() {
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
           </div>}
 
-          {mode !== 'reset' && <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+          {mode !== 'reset' && <div style={{ marginBottom: 18 }}>
             <button
               onClick={handleGoogle}
               disabled={!!loading}
               style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '10px 0', borderRadius: 9,
                 border: '1px solid rgba(255,255,255,0.1)',
                 background: 'rgba(255,255,255,0.04)',
@@ -402,25 +370,7 @@ export default function Login() {
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              {loading === 'google' ? '…' : 'Google'}
-            </button>
-
-            <button
-              onClick={handleFacebook}
-              disabled={!!loading}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '10px 0', borderRadius: 9,
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(255,255,255,0.04)',
-                color: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-              </svg>
-              {loading === 'facebook' ? '…' : 'Facebook'}
+              {loading === 'google' ? '…' : 'Continuar con Google'}
             </button>
           </div>}
 

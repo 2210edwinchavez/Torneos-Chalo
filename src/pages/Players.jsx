@@ -3,13 +3,16 @@ import { useTournament, findAllEnrollments, getPaymentStatus } from '../context/
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import { getInitials, getTeamColor, formatDate } from '../utils/helpers';
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip,
+} from 'recharts';
 
 const EMPTY_FORM = { firstName: '', lastName: '', docNumber: '', birthDate: '', photo: null };
+const EMPTY_STATS = { convocados: '', titulares: '', minutos: '', goles: '' };
 
 /* ─── Photo Upload ─── */
 function PhotoUpload({ value, onChange }) {
   const inputRef = useRef(null);
-
   function handleFile(file) {
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Solo imágenes (JPG, PNG, WEBP).'); return; }
@@ -18,45 +21,244 @@ function PhotoUpload({ value, onChange }) {
     reader.onload = e => onChange(e.target.result);
     reader.readAsDataURL(file);
   }
-
   return (
     <div>
       <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
-      <div
-        className={`photo-upload-area${value ? ' has-photo' : ''}`}
-        onClick={() => inputRef.current.click()}
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-      >
+      <div className={`photo-upload-area${value ? ' has-photo' : ''}`} onClick={() => inputRef.current.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}>
         {value ? (
-          <>
-            <img src={value} className="photo-preview" alt="Foto" />
-            <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: 600 }}>Haz clic para cambiar</div>
-          </>
+          <><img src={value} className="photo-preview" alt="Foto" /><div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: 600 }}>Haz clic para cambiar</div></>
         ) : (
-          <>
-            <div style={{ fontSize: '2.2rem', marginBottom: 6 }}>📷</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 3 }}>Subir foto</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Arrastra o haz clic · JPG, PNG · máx 3 MB</div>
-          </>
+          <><div style={{ fontSize: '2.2rem', marginBottom: 6 }}>📷</div><div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 3 }}>Subir foto</div><div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Arrastra o haz clic · JPG, PNG · máx 3 MB</div></>
         )}
       </div>
-      {value && (
-        <button type="button" className="btn btn-danger btn-sm" style={{ marginTop: 6, width: '100%' }}
-          onClick={() => onChange(null)}>Quitar foto</button>
-      )}
+      {value && <button type="button" className="btn btn-danger btn-sm" style={{ marginTop: 6, width: '100%' }} onClick={() => onChange(null)}>Quitar foto</button>}
     </div>
   );
 }
 
+/* ─── Player Profile Modal ─── */
+function PlayerProfileModal({ player, enrollments, onClose, onEdit }) {
+  const { state, dispatch } = useTournament();
+  const { isAdmin } = useAuth();
+  const [editingStats, setEditingStats] = useState(null); // { tournamentId, form }
+
+  const age = player.birthDate
+    ? Math.floor((Date.now() - new Date(player.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000))
+    : null;
+
+  // Calcular stats por torneo
+  const statsByTournament = enrollments.map(({ tournament, team, enrollment }) => {
+    const saved = state.playerStats?.[player.id]?.[tournament.id] || {};
+    return {
+      tournament,
+      team,
+      enrollment,
+      convocados: Number(saved.convocados) || 0,
+      titulares: Number(saved.titulares) || 0,
+      minutos: Number(saved.minutos) || 0,
+      goles: Number(saved.goles) || 0,
+    };
+  });
+
+  // Totales
+  const totals = statsByTournament.reduce(
+    (acc, s) => ({
+      convocados: acc.convocados + s.convocados,
+      titulares: acc.titulares + s.titulares,
+      minutos: acc.minutos + s.minutos,
+      goles: acc.goles + s.goles,
+    }),
+    { convocados: 0, titulares: 0, minutos: 0, goles: 0 }
+  );
+
+  // Datos para radar chart (normalizados 0-100)
+  const maxMinutos = 90 * Math.max(totals.titulares, 1);
+  const radarData = [
+    { stat: 'Convocatoria', value: totals.convocados > 0 ? Math.min(100, Math.round((totals.convocados / Math.max(totals.convocados, 1)) * 100)) : 0, fullMark: 100 },
+    { stat: 'Titularidad', value: totals.convocados > 0 ? Math.min(100, Math.round((totals.titulares / totals.convocados) * 100)) : 0, fullMark: 100 },
+    { stat: 'Minutos', value: Math.min(100, Math.round((totals.minutos / Math.max(maxMinutos, 1)) * 100)), fullMark: 100 },
+    { stat: 'Goles', value: Math.min(100, totals.goles * 10), fullMark: 100 },
+    { stat: 'Partidos', value: Math.min(100, totals.titulares * 5), fullMark: 100 },
+  ];
+
+  function saveStats(tournamentId, form) {
+    dispatch({
+      type: 'UPDATE_PLAYER_STATS',
+      payload: {
+        playerId: player.id,
+        tournamentId,
+        stats: {
+          convocados: Number(form.convocados) || 0,
+          titulares: Number(form.titulares) || 0,
+          minutos: Number(form.minutos) || 0,
+          goles: Number(form.goles) || 0,
+        },
+      },
+    });
+    setEditingStats(null);
+  }
+
+  return (
+    <Modal
+      title="Perfil del jugador"
+      onClose={onClose}
+      footer={
+        <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'space-between' }}>
+          {isAdmin && <button className="btn btn-secondary" onClick={onEdit}>✏️ Editar datos</button>}
+          <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+        </div>
+      }
+    >
+      {/* ── Header jugador ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '14px 16px', background: 'var(--bg-card2)', borderRadius: 12, border: '1px solid var(--border)' }}>
+        {player.photo
+          ? <img src={player.photo} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary)', flexShrink: 0 }} alt="" />
+          : <div className="player-photo-placeholder" style={{ width: 72, height: 72, fontSize: '1.4rem', flexShrink: 0 }}>{getInitials(`${player.firstName} ${player.lastName}`) || '👤'}</div>
+        }
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text-primary)' }}>
+            {player.firstName} {player.lastName}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+            {age !== null && <span className="pill">🎂 {age} años</span>}
+            {player.docNumber && <span className="pill">📄 {player.docNumber}</span>}
+            {enrollments.length > 0 && (
+              <span className="pill" style={{ color: 'var(--primary-light)', background: 'rgba(132,204,22,0.1)' }}>
+                ⚽ {enrollments.length} torneo{enrollments.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {enrollments.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+          Sin inscripciones — no hay estadísticas disponibles.
+        </div>
+      ) : (
+        <>
+          {/* ── Radar Chart ── */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+              📊 Mapa de rendimiento
+            </div>
+            <div style={{ background: 'var(--bg-card2)', borderRadius: 12, border: '1px solid var(--border)', padding: '12px 8px' }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                  <PolarAngleAxis dataKey="stat" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} />
+                  <Radar name="Rendimiento" dataKey="value" stroke="#84cc16" fill="#84cc16" fillOpacity={0.25} strokeWidth={2} />
+                  <Tooltip
+                    contentStyle={{ background: '#111713', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.8rem' }}
+                    formatter={(v) => [`${v}%`, 'Rendimiento']}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* ── Tarjetas resumen totales ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+            {[
+              { label: 'Convocado', value: totals.convocados, icon: '📋', color: 'var(--primary-light)' },
+              { label: 'Titular', value: totals.titulares, icon: '⚽', color: 'var(--secondary)' },
+              { label: 'Minutos', value: totals.minutos, icon: '⏱️', color: 'var(--accent)' },
+              { label: 'Goles', value: totals.goles, icon: '🥅', color: 'var(--danger)' },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '1.3rem', marginBottom: 2 }}>{s.icon}</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em', marginTop: 3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Tabla por torneo ── */}
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+            📅 Historial por torneo
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {statsByTournament.map(s => (
+              <div key={s.tournament.id} style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{s.tournament.name}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      {s.team.name}
+                      {s.enrollment.shirtNumber && <span style={{ color: 'var(--primary-light)', fontWeight: 700, marginLeft: 6 }}>#{s.enrollment.shirtNumber}</span>}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    editingStats?.tournamentId === s.tournament.id ? null : (
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingStats({
+                        tournamentId: s.tournament.id,
+                        form: { convocados: s.convocados || '', titulares: s.titulares || '', minutos: s.minutos || '', goles: s.goles || '' },
+                      })}>
+                        ✏️ Editar stats
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {/* Edición de stats */}
+                {editingStats?.tournamentId === s.tournament.id ? (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 10 }}>
+                      {[
+                        { key: 'convocados', label: '📋 Convocado', placeholder: '0' },
+                        { key: 'titulares', label: '⚽ Titular', placeholder: '0' },
+                        { key: 'minutos', label: '⏱️ Minutos', placeholder: '0' },
+                        { key: 'goles', label: '🥅 Goles', placeholder: '0' },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 3 }}>{f.label}</label>
+                          <input
+                            type="number" min="0" className="form-input"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                            placeholder={f.placeholder}
+                            value={editingStats.form[f.key]}
+                            onChange={e => setEditingStats(prev => ({ ...prev, form: { ...prev.form, [f.key]: e.target.value } }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => saveStats(s.tournament.id, editingStats.form)}>✓ Guardar</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingStats(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                    {[
+                      { label: 'Convoc.', value: s.convocados, color: 'var(--primary-light)' },
+                      { label: 'Titular', value: s.titulares, color: 'var(--secondary)' },
+                      { label: 'Minutos', value: s.minutos, color: 'var(--accent)' },
+                      { label: 'Goles', value: s.goles, color: 'var(--danger)' },
+                    ].map(stat => (
+                      <div key={stat.label} style={{ background: 'var(--bg-card)', borderRadius: 7, padding: '6px 4px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
 /* ─── Player row ─── */
-function PlayerRow({ player, enrollments, onDelete, onEdit }) {
+function PlayerRow({ player, enrollments, onDelete, onEdit, onView }) {
   const age = player.birthDate
     ? Math.floor((Date.now() - new Date(player.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000))
     : null;
 
   return (
-    <tr>
+    <tr style={{ cursor: 'pointer' }} onClick={onView}>
       <td>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {player.photo
@@ -76,19 +278,16 @@ function PlayerRow({ player, enrollments, onDelete, onEdit }) {
         {enrollments.length === 0
           ? <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Sin inscripción</span>
           : <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {enrollments.map(({ tournament, team, enrollment }) => {
-                const status = getPaymentStatus(enrollment.payment);
-                return (
-                  <div key={enrollment.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div className="team-avatar" style={{ width: 22, height: 22, fontSize: '0.6rem', fontWeight: 800, background: getTeamColor(team.colorIndex) + '33', color: getTeamColor(team.colorIndex) }}>
-                      {getInitials(team.name)}
-                    </div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{team.name}</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>·</span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{tournament.name}</span>
+              {enrollments.map(({ tournament, team, enrollment }) => (
+                <div key={enrollment.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="team-avatar" style={{ width: 22, height: 22, fontSize: '0.6rem', fontWeight: 800, background: getTeamColor(team.colorIndex) + '33', color: getTeamColor(team.colorIndex) }}>
+                    {getInitials(team.name)}
                   </div>
-                );
-              })}
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{team.name}</span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>·</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{tournament.name}</span>
+                </div>
+              ))}
             </div>
         }
       </td>
@@ -98,35 +297,33 @@ function PlayerRow({ player, enrollments, onDelete, onEdit }) {
           : enrollments.map(({ enrollment }) => {
               const status = getPaymentStatus(enrollment.payment);
               return (
-                <span key={enrollment.id} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: '3px 8px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700,
-                  background: status.color + '22', color: status.color,
-                  border: `1px solid ${status.color}44`,
-                }}>
+                <span key={enrollment.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700, background: status.color + '22', color: status.color, border: `1px solid ${status.color}44` }}>
                   {status.pct === 100 ? '✓' : '○'} {status.label}
                 </span>
               );
             })
         }
       </td>
-      <AdminPlayerActions player={player} enrollments={enrollments} onEdit={onEdit} onDelete={onDelete} />
+      <td onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-ghost btn-sm" title="Ver perfil" onClick={onView}>👤</button>
+          <AdminPlayerActions player={player} enrollments={enrollments} onEdit={onEdit} onDelete={onDelete} />
+        </div>
+      </td>
     </tr>
   );
 }
 
 function AdminPlayerActions({ player, enrollments, onEdit, onDelete }) {
   const { isAdmin } = useAuth();
-  if (!isAdmin) return <td />;
+  if (!isAdmin) return null;
   return (
-    <td>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => onEdit(player)} title="Editar">✏️</button>
-        {enrollments.length === 0 && (
-          <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(player.id)} title="Eliminar">🗑</button>
-        )}
-      </div>
-    </td>
+    <>
+      <button className="btn btn-ghost btn-sm btn-icon" onClick={e => { e.stopPropagation(); onEdit(player); }} title="Editar">✏️</button>
+      {enrollments.length === 0 && (
+        <button className="btn btn-danger btn-sm btn-icon" onClick={e => { e.stopPropagation(); onDelete(player.id); }} title="Eliminar">🗑</button>
+      )}
+    </>
   );
 }
 
@@ -140,6 +337,7 @@ export default function Players() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [viewPlayer, setViewPlayer] = useState(null);
 
   const filtered = (state.globalPlayers || []).filter(p => {
     const name = `${p.firstName} ${p.lastName} ${p.docNumber}`.toLowerCase();
@@ -241,11 +439,22 @@ export default function Players() {
                   enrollments={findAllEnrollments(state.tournaments, player.id)}
                   onDelete={id => setDeleteConfirm(id)}
                   onEdit={openEdit}
+                  onView={() => setViewPlayer(player)}
                 />
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Player profile modal */}
+      {viewPlayer && (
+        <PlayerProfileModal
+          player={viewPlayer}
+          enrollments={findAllEnrollments(state.tournaments, viewPlayer.id)}
+          onClose={() => setViewPlayer(null)}
+          onEdit={() => { openEdit(viewPlayer); setViewPlayer(null); }}
+        />
       )}
 
       {/* Create / Edit modal */}

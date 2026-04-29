@@ -108,6 +108,7 @@ function ShieldUpload({ value, onChange, required }) {
 /* ─── Payment Modal ─── */
 function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee, onClose, dispatch }) {
   const { formatMoney } = useCurrency();
+  const { isAdmin } = useAuth();
   const payment = enrollment.payment;
   const status = getPaymentStatus(payment);
 
@@ -178,9 +179,11 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
                 {formatMoney(payment.totalAmount)}
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14 }}>Pago único de contado</div>
-              <button className="btn btn-success btn-lg w-full" onClick={payCash}>
-                💵 Confirmar pago de contado
-              </button>
+              {isAdmin && (
+                <button className="btn btn-success btn-lg w-full" onClick={payCash}>
+                  💵 Confirmar pago de contado
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -220,7 +223,7 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
               <div style={{ fontWeight: 800, fontSize: '1rem', color: inst.paid ? 'var(--success)' : 'var(--text-primary)' }}>
                 {formatMoney(inst.amount)}
               </div>
-              {!inst.paid && (
+              {!inst.paid && isAdmin && (
                 <button
                   className="btn btn-success btn-sm"
                   onClick={() => payInstallment(inst.number)}
@@ -708,6 +711,7 @@ function PaymentStep({ inscriptionFee, shirtNumber, setShirtNumber, paymentType,
 /* ─── Enrolled player row inside team card ─── */
 function EnrolledPlayerRow({ enrollment, player, tournamentId, teamId, inscriptionFee, dispatch }) {
   const [showPayment, setShowPayment] = useState(false);
+  const { isAdmin } = useAuth();
   const status = getPaymentStatus(enrollment.payment);
   const fullName = `${player.firstName} ${player.lastName}`;
 
@@ -741,21 +745,34 @@ function EnrolledPlayerRow({ enrollment, player, tournamentId, teamId, inscripti
         </div>
 
         {/* Payment badge */}
-        <button
-          onClick={() => setShowPayment(true)}
-          style={{
+        {isAdmin ? (
+          <button
+            onClick={() => setShowPayment(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+              borderRadius: 99, fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
+              background: status.color + '22', color: status.color, border: `1px solid ${status.color}44`,
+              transition: 'all 0.15s', flexShrink: 0,
+            }}
+            title="Ver estado de pago"
+          >
+            {status.pct === 100 ? '✓' : '💳'} {status.label}
+          </button>
+        ) : (
+          <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px',
-            borderRadius: 99, fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
+            borderRadius: 99, fontSize: '0.65rem', fontWeight: 700,
             background: status.color + '22', color: status.color, border: `1px solid ${status.color}44`,
-            transition: 'all 0.15s', flexShrink: 0,
-          }}
-          title="Ver estado de pago"
-        >
-          {status.pct === 100 ? '✓' : '💳'} {status.label}
-        </button>
+            flexShrink: 0,
+          }}>
+            {status.pct === 100 ? '✓' : '○'} {status.label}
+          </span>
+        )}
 
-        {/* Remove */}
-        <button className="btn btn-danger btn-sm btn-icon" style={{ flexShrink: 0, padding: '4px 6px', fontSize: '0.7rem' }} onClick={handleUnenroll} title="Retirar jugador">✕</button>
+        {/* Remove — admin only */}
+        {isAdmin && (
+          <button className="btn btn-danger btn-sm btn-icon" style={{ flexShrink: 0, padding: '4px 6px', fontSize: '0.7rem' }} onClick={handleUnenroll} title="Retirar jugador">✕</button>
+        )}
       </div>
 
       {showPayment && (

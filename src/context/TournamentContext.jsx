@@ -8,6 +8,8 @@ const INITIAL_STATE = {
   globalPlayers: [],
   tournaments: [],
   activeTournamentId: null,
+  playerStats: {},
+  lineups: {},   // lineups[matchId][teamId] = { formation, starters:{slotIdx:playerId}, convocados:[...] }
 };
 
 function buildPayment(type, totalAmount) {
@@ -330,6 +332,37 @@ function reducer(state, action) {
           if (t.id !== tournamentId) return t;
           return { ...t, matches: t.matches.filter(m => m.id !== matchId) };
         }),
+      };
+    }
+
+    case 'UPDATE_LINEUP': {
+      const { matchId, teamId, lineup } = action.payload;
+      return {
+        ...state,
+        lineups: {
+          ...state.lineups,
+          [matchId]: {
+            ...(state.lineups[matchId] || {}),
+            [teamId]: lineup,
+          },
+        },
+      };
+    }
+
+    case 'UPDATE_PLAYER_STATS': {
+      const { playerId, tournamentId, stats } = action.payload;
+      return {
+        ...state,
+        playerStats: {
+          ...state.playerStats,
+          [playerId]: {
+            ...(state.playerStats[playerId] || {}),
+            [tournamentId]: {
+              ...(state.playerStats?.[playerId]?.[tournamentId] || {}),
+              ...stats,
+            },
+          },
+        },
       };
     }
 

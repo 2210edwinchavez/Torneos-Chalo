@@ -185,7 +185,7 @@ export function AuthProvider({ children }) {
       session, isAdmin, isLoggedIn, isGuest,
       user: supaSession?.user,
       signUpWithEmail, signInWithEmail,
-      signInWithGoogle, signInWithFacebook,
+      signInWithGoogle,
       loginAsGuest, logout, changePassword, resetPassword,
     }}>
       {children}

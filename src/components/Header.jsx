@@ -11,6 +11,7 @@ const PAGE_INFO = {
   '/equipos': { title: 'Equipos', subtitle: 'Equipos del torneo activo' },
   '/partidos': { title: 'Partidos', subtitle: 'Fixtures y resultados' },
   '/posiciones': { title: 'Tabla de Posiciones', subtitle: 'Clasificación actualizada' },
+  '/goleadores': { title: 'Goleadores', subtitle: 'Ranking de goles y disciplina' },
   '/bracket': { title: 'Bracket', subtitle: 'Cuadro de eliminación' },
 };
 
@@ -81,7 +82,7 @@ export default function Header({ currentPath, onMenuToggle }) {
 
         <div className="header-actions">
           {/* Selector de moneda */}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="header-currency-btns" style={{ display: 'flex', gap: 4 }}>
             {Object.values(CURRENCIES).map(c => (
               <button
                 key={c.code}
@@ -96,15 +97,16 @@ export default function Header({ currentPath, onMenuToggle }) {
                   transition: 'all 0.15s',
                 }}
               >
-                {c.flag} {c.code}
+                <span className="currency-flag">{c.flag}</span>
+                <span className="currency-code"> {c.code}</span>
               </button>
             ))}
           </div>
 
           {activeTournament && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeTournament.status === 'active' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block' }} />
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            <div className="header-tournament" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeTournament.status === 'active' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
+              <span className="header-tournament-name" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                 {activeTournament.name}
               </span>
             </div>
@@ -152,6 +154,7 @@ export default function Header({ currentPath, onMenuToggle }) {
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowMenu(v => !v)}
+              className="header-user-btn"
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '6px 12px', borderRadius: 8,
@@ -161,7 +164,7 @@ export default function Header({ currentPath, onMenuToggle }) {
               }}
             >
               <span style={{ fontSize: '1rem' }}>{isAdmin ? '🔐' : '👁️'}</span>
-              <div style={{ textAlign: 'left' }}>
+              <div className="header-user-text" style={{ textAlign: 'left' }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isAdmin ? 'var(--primary-light)' : 'var(--secondary)', lineHeight: 1.2 }}>
                   {session?.name}
                 </div>
@@ -169,7 +172,7 @@ export default function Header({ currentPath, onMenuToggle }) {
                   {isAdmin ? 'Acceso total' : 'Solo lectura'}
                 </div>
               </div>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 2 }}>▼</span>
+              <span className="header-user-arrow" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 2 }}>▼</span>
             </button>
 
             {/* Dropdown */}

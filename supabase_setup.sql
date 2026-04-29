@@ -88,7 +88,46 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- ── 5. Promover primer usuario a admin (opcional) ────────────
+-- ── 5. Permitir lectura pública del estado (para formularios de inscripción) ──
+-- Necesario para que la página /registro/:token funcione sin autenticación
+CREATE POLICY "app_state_select_anon"
+  ON public.app_state FOR SELECT
+  TO anon
+  USING (true);
+
+-- ── 6. Tabla para solicitudes de inscripción públicas ──────────
+CREATE TABLE IF NOT EXISTS public.player_submissions (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token        text NOT NULL,
+  tournament_id text NOT NULL,
+  team_id      text NOT NULL,
+  player_data  jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status       text NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.player_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Cualquier visitante (anónimo o autenticado) puede enviar solicitudes
+CREATE POLICY "player_submissions_insert"
+  ON public.player_submissions FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
+
+-- Solo usuarios autenticados pueden leer las solicitudes
+CREATE POLICY "player_submissions_select"
+  ON public.player_submissions FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- Solo usuarios autenticados pueden cambiar el estado (aprobar/rechazar)
+CREATE POLICY "player_submissions_update"
+  ON public.player_submissions FOR UPDATE
+  TO authenticated
+  USING (true);
+
+-- ── 8. Promover primer usuario a admin (opcional) ────────────
 -- Descomenta y reemplaza el email para hacer admin a tu usuario:
 -- UPDATE public.profiles
 -- SET role = 'admin'

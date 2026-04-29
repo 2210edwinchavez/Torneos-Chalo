@@ -13,6 +13,8 @@ import Teams from './pages/Teams';
 import Fixtures from './pages/Fixtures';
 import Standings from './pages/Standings';
 import Bracket from './pages/Bracket';
+import Scorers from './pages/Scorers';
+import PlayerRegistration from './pages/PlayerRegistration';
 
 function FieldBackground() {
   return (
@@ -78,6 +80,7 @@ function AppLayout() {
             <Route path="/equipos" element={<Teams />} />
             <Route path="/partidos" element={<Fixtures />} />
             <Route path="/posiciones" element={<Standings />} />
+            <Route path="/goleadores" element={<Scorers />} />
             <Route path="/bracket" element={<Bracket />} />
           </Routes>
         </main>
@@ -92,7 +95,12 @@ export default function App() {
       <AuthProvider>
         <CurrencyProvider>
           <TournamentProvider>
-            <AppLayout />
+            <Routes>
+              {/* Ruta pública — no requiere autenticación */}
+              <Route path="/registro/:token" element={<PlayerRegistration />} />
+              {/* Resto de la app — requiere login */}
+              <Route path="*" element={<AppLayout />} />
+            </Routes>
           </TournamentProvider>
         </CurrencyProvider>
       </AuthProvider>

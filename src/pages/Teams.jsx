@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament, findPlayerEnrollment, getPaymentStatus } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import { getTeamColor, getInitials, formatDate } from '../utils/helpers';
+import { loadPendingSubmissions, updateSubmissionStatus, supabaseConfigured } from '../lib/supabase';
 
 const EMPTY_TEAM_FORM = { name: '', shortName: '', coach: '', city: '', shield: null };
 
@@ -790,11 +791,310 @@ function EnrolledPlayerRow({ enrollment, player, tournamentId, teamId, inscripti
   );
 }
 
+/* ─── Modal de gestión del enlace de inscripción ─── */
+function TeamRegistrationModal({ team, tournament, dispatch, onClose }) {
+  const { isAdmin } = useAuth();
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [copyOk, setCopyOk] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+
+  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+  const registrationLink = team.registrationToken
+    ? `${appUrl}/registro/${team.registrationToken}`
+    : null;
+
+  /* Genera un token simple basado en timestamp + random */
+  function generateToken() {
+    const rand = Math.random().toString(36).slice(2, 10);
+    const ts = Date.now().toString(36);
+    return `${ts}-${rand}`;
+  }
+
+  /* Activar enlace: genera token si no existe y pone active = true */
+  function handleActivate() {
+    const token = team.registrationToken || generateToken();
+    dispatch({
+      type: 'UPDATE_TEAM',
+      payload: {
+        tournamentId: tournament.id,
+        teamId: team.id,
+        data: { registrationToken: token, registrationActive: true },
+      },
+    });
+  }
+
+  /* Desactivar enlace (conserva el token para reutilizar) */
+  function handleDeactivate() {
+    dispatch({
+      type: 'UPDATE_TEAM',
+      payload: {
+        tournamentId: tournament.id,
+        teamId: team.id,
+        data: { registrationActive: false },
+      },
+    });
+  }
+
+  /* Generar un enlace nuevo (invalida el anterior) */
+  function handleNewToken() {
+    if (!confirm('¿Generar un enlace nuevo? El enlace anterior dejará de funcionar.')) return;
+    dispatch({
+      type: 'UPDATE_TEAM',
+      payload: {
+        tournamentId: tournament.id,
+        teamId: team.id,
+        data: { registrationToken: generateToken(), registrationActive: true },
+      },
+    });
+  }
+
+  /* Copiar enlace al portapapeles */
+  async function handleCopy() {
+    if (!registrationLink) return;
+    await navigator.clipboard.writeText(registrationLink);
+    setCopyOk(true);
+    setTimeout(() => setCopyOk(false), 2000);
+  }
+
+  /* Cargar solicitudes pendientes */
+  const loadSubmissions = useCallback(async () => {
+    if (!team.registrationToken || !supabaseConfigured) return;
+    setLoading(true);
+    const data = await loadPendingSubmissions(team.registrationToken);
+    setSubmissions(data);
+    setLoading(false);
+  }, [team.registrationToken]);
+
+  useEffect(() => { loadSubmissions(); }, [loadSubmissions]);
+
+  /* Aprobar solicitud → crea jugador en el equipo */
+  async function handleApprove(sub) {
+    setProcessingId(sub.id);
+    const pd = sub.player_data;
+    dispatch({
+      type: 'CREATE_AND_ENROLL',
+      payload: {
+        player: {
+          firstName: pd.firstName,
+          lastName: pd.lastName,
+          docNumber: pd.docNumber || '',
+          birthDate: pd.birthDate || '',
+          photo: pd.photo || null,
+        },
+        tournamentId: tournament.id,
+        teamId: team.id,
+        shirtNumber: '',
+        paymentType: 'cash',
+        inscriptionFee: tournament.inscriptionFee || 0,
+      },
+    });
+    await updateSubmissionStatus(sub.id, 'approved');
+    setSubmissions(prev => prev.filter(s => s.id !== sub.id));
+    setProcessingId(null);
+  }
+
+  /* Rechazar solicitud */
+  async function handleReject(sub) {
+    setProcessingId(sub.id);
+    await updateSubmissionStatus(sub.id, 'rejected');
+    setSubmissions(prev => prev.filter(s => s.id !== sub.id));
+    setProcessingId(null);
+  }
+
+  const pending = submissions.filter(s => s.status === 'pending');
+  const approved = submissions.filter(s => s.status === 'approved');
+  const rejected = submissions.filter(s => s.status === 'rejected');
+
+  return (
+    <Modal
+      title={`Enlace de inscripción — ${team.name}`}
+      onClose={onClose}
+      footer={<button className="btn btn-secondary" onClick={onClose}>Cerrar</button>}
+    >
+      {/* Estado del enlace */}
+      <div style={{
+        padding: '14px 16px', borderRadius: 12, marginBottom: 18,
+        background: team.registrationActive ? 'rgba(16,185,129,0.07)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${team.registrationActive ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{
+          width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+          background: team.registrationActive ? 'var(--success)' : 'var(--text-muted)',
+          boxShadow: team.registrationActive ? '0 0 8px var(--success)' : 'none',
+        }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+            {team.registrationActive ? 'Enlace activo' : team.registrationToken ? 'Enlace desactivado' : 'Sin enlace generado'}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+            {team.registrationActive
+              ? 'Cualquier persona con el enlace puede enviar una solicitud.'
+              : 'Activa el enlace para comenzar a recibir solicitudes.'}
+          </div>
+        </div>
+        {isAdmin && (
+          team.registrationActive
+            ? <button className="btn btn-danger btn-sm" onClick={handleDeactivate}>Desactivar</button>
+            : <button className="btn btn-success btn-sm" onClick={handleActivate}>Activar</button>
+        )}
+      </div>
+
+      {/* Enlace generado */}
+      {registrationLink && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.06em' }}>
+            Enlace para compartir
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <div style={{
+              flex: 1, padding: '9px 12px', borderRadius: 8,
+              background: 'var(--bg-card2)', border: '1px solid var(--border)',
+              fontSize: '0.75rem', color: 'var(--text-secondary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              userSelect: 'all', fontFamily: 'monospace',
+            }}>
+              {registrationLink}
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={handleCopy} style={{ flexShrink: 0 }}>
+              {copyOk ? '✓ Copiado' : '📋 Copiar'}
+            </button>
+          </div>
+          {isAdmin && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-muted)' }}
+              onClick={handleNewToken}
+            >
+              🔄 Generar enlace nuevo (invalida el actual)
+            </button>
+          )}
+
+          {/* Advertencia si el enlace usa localhost */}
+          {registrationLink && registrationLink.includes('localhost') && (
+            <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: '0.78rem', color: 'var(--warning)' }}>
+              ⚠️ <strong>El enlace usa "localhost"</strong> y solo funciona en este computador.
+              Para compartirlo con otros dispositivos, necesitas publicar la app en internet (Vercel, Netlify, etc.) y configurar <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4 }}>VITE_APP_URL</code> con la URL real.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Solicitudes pendientes */}
+      {supabaseConfigured && team.registrationToken && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Solicitudes de inscripción
+              {pending.length > 0 && (
+                <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.2)', color: 'var(--warning)', fontSize: '0.7rem', fontWeight: 800 }}>
+                  {pending.length} pendiente{pending.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={loadSubmissions} disabled={loading}>
+              {loading ? '⏳' : '🔄 Actualizar'}
+            </button>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Cargando…</div>
+          ) : pending.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '18px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              No hay solicitudes pendientes
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pending.map(sub => {
+                const pd = sub.player_data;
+                const age = pd.birthDate
+                  ? Math.floor((Date.now() - new Date(pd.birthDate)) / (365.25 * 24 * 3600 * 1000))
+                  : null;
+                return (
+                  <div key={sub.id} style={{
+                    padding: '12px 14px', borderRadius: 10,
+                    background: 'var(--bg-card2)', border: '1px solid rgba(245,158,11,0.25)',
+                    display: 'flex', gap: 12, alignItems: 'center',
+                  }}>
+                    {/* Foto */}
+                    {pd.photo
+                      ? <img src={pd.photo} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
+                      : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>👤</div>
+                    }
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                        {pd.firstName} {pd.lastName}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: '0 8px' }}>
+                        {pd.docNumber && <span>📄 {pd.docNumber}</span>}
+                        {age !== null && <span>🎂 {age} años</span>}
+                        {pd.position && <span>⚽ {pd.position}</span>}
+                        {pd.phone && <span>📱 {pd.phone}</span>}
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                        {new Date(sub.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    {/* Acciones */}
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          className="btn btn-success btn-sm"
+                          disabled={processingId === sub.id}
+                          onClick={() => handleApprove(sub)}
+                          title="Aprobar e inscribir"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          disabled={processingId === sub.id}
+                          onClick={() => handleReject(sub)}
+                          title="Rechazar"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Historial resumido */}
+          {(approved.length > 0 || rejected.length > 0) && (
+            <div style={{ marginTop: 12, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 12 }}>
+              {approved.length > 0 && <span>✓ {approved.length} aprobada{approved.length !== 1 ? 's' : ''}</span>}
+              {rejected.length > 0 && <span>✕ {rejected.length} rechazada{rejected.length !== 1 ? 's' : ''}</span>}
+            </div>
+          )}
+
+          {!supabaseConfigured && (
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '0.78rem', color: 'var(--warning)', marginTop: 10 }}>
+              ⚠️ Supabase no está configurado. Las solicitudes no se podrán recibir.
+            </div>
+          )}
+        </div>
+      )}
+
+      {!supabaseConfigured && (
+        <div style={{ padding: '12px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '0.8rem', color: 'var(--warning)', marginTop: 10 }}>
+          ⚠️ <strong>Supabase no está configurado.</strong> El enlace de inscripción requiere Supabase para funcionar. Configura las variables <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /* ─── Team Card ─── */
 function TeamCard({ team, tournament, dispatch }) {
   const [showPlayers, setShowPlayers] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
   const [deleteTeamConfirm, setDeleteTeamConfirm] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
   const { state } = useTournament();
   const { isAdmin } = useAuth();
 
@@ -847,7 +1147,27 @@ function TeamCard({ team, tournament, dispatch }) {
               {team.city}
             </div>
           </div>
-          {isAdmin && <button className="btn btn-danger btn-icon btn-sm" onClick={() => setDeleteTeamConfirm(true)} title="Eliminar equipo">🗑</button>}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {/* Enlace de inscripción — visible para todos, activable solo por admin */}
+            <button
+              className="btn btn-secondary btn-icon btn-sm"
+              onClick={() => setShowRegistration(true)}
+              title="Enlace de inscripción"
+              style={{ position: 'relative' }}
+            >
+              🔗
+              {team.registrationActive && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'var(--success)',
+                  boxShadow: '0 0 6px var(--success)',
+                  border: '1.5px solid var(--bg-card)',
+                }} />
+              )}
+            </button>
+            {isAdmin && <button className="btn btn-danger btn-icon btn-sm" onClick={() => setDeleteTeamConfirm(true)} title="Eliminar equipo">🗑</button>}
+          </div>
         </div>
 
         {team.coach && (
@@ -990,6 +1310,16 @@ function TeamCard({ team, tournament, dispatch }) {
             Se perderán las {enrollments.length} inscripción{enrollments.length !== 1 ? 'es' : ''} de jugadores.
           </p>
         </Modal>
+      )}
+
+      {/* Registration link modal */}
+      {showRegistration && (
+        <TeamRegistrationModal
+          team={team}
+          tournament={tournament}
+          dispatch={dispatch}
+          onClose={() => setShowRegistration(false)}
+        />
       )}
     </>
   );

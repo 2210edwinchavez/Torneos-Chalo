@@ -1060,7 +1060,12 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 
 /* Responsive */
 @media (max-width: 768px) {
-  :root { --sidebar-w: 0px; }
+  :root {
+    --sidebar-w: 0px;
+    --header-h: 56px;
+  }
+
+  html, body { overflow-x: hidden; }
 
   /* Sidebar: hidden off-screen by default, slides in when open */
   .sidebar {
@@ -1080,10 +1085,79 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   .sidebar-close-btn { display: block; }
 
   .main-content { margin-left: 0; }
-  .header { left: 0; padding: 0 14px; }
-  .page-content { padding: 16px 14px; }
+  .header {
+    left: 0;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .header-actions { gap: 6px; }
 
-  .stat-grid { grid-template-columns: 1fr 1fr; }
+  /* Currency buttons: más compactos */
+  .header-currency-btns { gap: 3px; }
+  .header-currency-btns button {
+    padding: 3px 6px !important;
+    font-size: 0.65rem !important;
+  }
+
+  /* Nombre del torneo: ocultar texto largo, solo mostrar el punto de estado */
+  .header-tournament-name { display: none; }
+
+  /* Botón de usuario: ocultar texto en móvil, solo mostrar ícono */
+  .header-user-btn {
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+  .header-user-text { display: none !important; }
+  .header-user-arrow { display: none !important; }
+
+  .page-content { padding: 14px 12px; }
+
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 1.75rem; }
+
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
+
+  /* Page header: apilar título y botones */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-title { font-size: 1.25rem; }
+
+  /* Tablas: scroll horizontal */
+  .table-wrapper { -webkit-overflow-scrolling: touch; }
+
+  /* Match cards más compactos */
+  .match-card { padding: 12px 14px; gap: 10px; }
+  .match-team-name { font-size: 0.82rem; }
+}
+
+/* Extra pequeño: < 480px */
+@media (max-width: 480px) {
+  .header-currency-btns button {
+    padding: 3px 4px !important;
+  }
+  .currency-code { display: none; }
+
+  .stat-grid { gap: 8px; }
+  .stat-card { padding: 12px 10px; }
+  .stat-value { font-size: 1.5rem; }
+  .stat-label { font-size: 0.7rem; }
+  .stat-icon { font-size: 1.2rem; }
+
+  .page-content { padding: 12px 10px; }
+
+  .tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .tab { padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }
+
+  .modal-overlay { padding: 12px; }
+  .modal-header { padding: 16px 16px 0; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 0 16px 16px; gap: 8px; }
+
+  .btn { font-size: 0.82rem; padding: 7px 12px; }
+  .btn-lg { font-size: 0.875rem; padding: 9px 16px; }
 }

@@ -46,3 +46,48 @@ export async function saveStateToDB(state) {
     console.error('Error guardando en Supabase:', error.message);
   }
 }
+
+/** Lee el estado público sin autenticación (necesita política anon en Supabase) */
+export async function loadStatePublic() {
+  const { data, error } = await supabase
+    .from('app_state')
+    .select('data')
+    .eq('id', STATE_ID)
+    .single();
+  if (error) return null;
+  return data?.data ?? null;
+}
+
+/** Envía una solicitud de inscripción pública (sin auth, tabla player_submissions) */
+export async function submitPlayerRegistration({ token, tournamentId, teamId, playerData }) {
+  const { error } = await supabase
+    .from('player_submissions')
+    .insert({
+      token,
+      tournament_id: tournamentId,
+      team_id: teamId,
+      player_data: playerData,
+      status: 'pending',
+    });
+  return { error: error?.message || null };
+}
+
+/** Carga las solicitudes pendientes para un token de equipo (solo admin) */
+export async function loadPendingSubmissions(token) {
+  const { data, error } = await supabase
+    .from('player_submissions')
+    .select('*')
+    .eq('token', token)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+/** Cambia el estado de una solicitud (approved / rejected) */
+export async function updateSubmissionStatus(id, status) {
+  const { error } = await supabase
+    .from('player_submissions')
+    .update({ status })
+    .eq('id', id);
+  return { error: error?.message || null };
+}

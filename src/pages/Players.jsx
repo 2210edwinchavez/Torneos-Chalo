@@ -36,19 +36,52 @@ function PhotoUpload({ value, onChange }) {
   );
 }
 
+/* ─── Helper: obtener stats de partidos para un jugador ─── */
+function getPlayerMatchEvents(tournaments, playerId) {
+  const goals = [];
+  const cards = [];
+  const subs = [];
+
+  for (const tournament of tournaments) {
+    for (const match of (tournament.matches || [])) {
+      const home = tournament.teams.find(t => t.id === match.homeId);
+      const away = tournament.teams.find(t => t.id === match.awayId);
+      const ctx = { match, tournament, home, away };
+
+      for (const g of (match.goals || [])) {
+        if (g.playerId === playerId) goals.push({ ...g, ...ctx });
+      }
+      for (const c of (match.cards || [])) {
+        if (c.playerId === playerId) cards.push({ ...c, ...ctx });
+      }
+      for (const s of (match.substitutions || [])) {
+        if (s.playerOutId === playerId || s.playerInId === playerId) subs.push({ ...s, ...ctx });
+      }
+    }
+  }
+
+  return { goals, cards, subs };
+}
+
 /* ─── Player Profile Modal ─── */
 function PlayerProfileModal({ player, enrollments, onClose, onEdit }) {
   const { state, dispatch } = useTournament();
   const { isAdmin } = useAuth();
   const [editingStats, setEditingStats] = useState(null); // { tournamentId, form }
+  const [activeSection, setActiveSection] = useState('stats'); // 'stats' | 'events'
 
   const age = player.birthDate
     ? Math.floor((Date.now() - new Date(player.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000))
     : null;
 
+  // Eventos de partido (goles, tarjetas, cambios) — calculado dinámicamente
+  const { goals: matchGoals, cards: matchCards, subs: matchSubs } = getPlayerMatchEvents(state.tournaments, player.id);
+
   // Calcular stats por torneo
   const statsByTournament = enrollments.map(({ tournament, team, enrollment }) => {
     const saved = state.playerStats?.[player.id]?.[tournament.id] || {};
+    // Goles desde partidos reales
+    const realGoals = matchGoals.filter(g => g.tournament.id === tournament.id && g.type !== 'autogol').length;
     return {
       tournament,
       team,
@@ -56,7 +89,7 @@ function PlayerProfileModal({ player, enrollments, onClose, onEdit }) {
       convocados: Number(saved.convocados) || 0,
       titulares: Number(saved.titulares) || 0,
       minutos: Number(saved.minutos) || 0,
-      goles: Number(saved.goles) || 0,
+      goles: realGoals || Number(saved.goles) || 0,
     };
   });
 
@@ -70,6 +103,9 @@ function PlayerProfileModal({ player, enrollments, onClose, onEdit }) {
     }),
     { convocados: 0, titulares: 0, minutos: 0, goles: 0 }
   );
+
+  const totalYellow = matchCards.filter(c => c.type === 'yellow').length;
+  const totalRed = matchCards.filter(c => c.type === 'red').length;
 
   // Datos para radar chart (normalizados 0-100)
   const maxMinutos = 90 * Math.max(totals.titulares, 1);
@@ -131,9 +167,162 @@ function PlayerProfileModal({ player, enrollments, onClose, onEdit }) {
         </div>
       </div>
 
-      {enrollments.length === 0 ? (
+      {/* ── Tabs de sección ── */}
+      {(enrollments.length > 0 || matchGoals.length > 0 || matchCards.length > 0 || matchSubs.length > 0) && (
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
+          {[
+            { id: 'stats', label: '📊 Estadísticas' },
+            { id: 'events', label: `⚽ Historial (${matchGoals.length + matchCards.length + matchSubs.length})` },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id)}
+              style={{
+                flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
+                fontSize: '0.78rem', fontWeight: 700,
+                background: activeSection === tab.id ? 'transparent' : 'transparent',
+                color: activeSection === tab.id ? 'var(--primary-light)' : 'var(--text-muted)',
+                borderBottom: activeSection === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                transition: 'all 0.15s',
+              }}
+            >{tab.label}</button>
+          ))}
+        </div>
+      )}
+
+      {enrollments.length === 0 && matchGoals.length === 0 && matchCards.length === 0 && matchSubs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          Sin inscripciones — no hay estadísticas disponibles.
+          Sin inscripciones ni estadísticas disponibles.
+        </div>
+      ) : activeSection === 'events' ? (
+        /* ── HISTORIAL DE PARTIDOS ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Resumen de tarjetas */}
+          {(totalYellow > 0 || totalRed > 0) && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {totalYellow > 0 && (
+                <div style={{ flex: 1, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem' }}>🟨</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--warning)', lineHeight: 1 }}>{totalYellow}</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 2 }}>Amarillas</div>
+                </div>
+              )}
+              {totalRed > 0 && (
+                <div style={{ flex: 1, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem' }}>🟥</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--danger)', lineHeight: 1 }}>{totalRed}</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 2 }}>Rojas</div>
+                </div>
+              )}
+              {matchGoals.filter(g => g.type !== 'autogol').length > 0 && (
+                <div style={{ flex: 1, background: 'rgba(132,204,22,0.08)', border: '1px solid rgba(132,204,22,0.25)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem' }}>⚽</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--primary-light)', lineHeight: 1 }}>{matchGoals.filter(g => g.type !== 'autogol').length}</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 2 }}>Goles</div>
+                </div>
+              )}
+              {matchSubs.length > 0 && (
+                <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.4rem' }}>🔄</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--secondary)', lineHeight: 1 }}>{matchSubs.length}</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 2 }}>Cambios</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Goles */}
+          {matchGoals.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>⚽ Goles marcados</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {matchGoals.map((g, i) => {
+                  const opponentTeam = g.teamId === g.home?.id ? g.away : g.home;
+                  const myTeam = g.teamId === g.home?.id ? g.home : g.away;
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <span>⚽</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                          {g.tournament.name}
+                          {g.type !== 'normal' && (
+                            <span style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 800, color: g.type === 'penalty' ? 'var(--warning)' : 'var(--danger)', background: g.type === 'penalty' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)', padding: '1px 5px', borderRadius: 4 }}>
+                              {g.type === 'penalty' ? 'PEN' : 'AG'}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                          {g.home?.name} vs {g.away?.name} · R{g.match.round}
+                        </div>
+                      </div>
+                      <span style={{ fontWeight: 800, color: 'var(--primary-light)', fontSize: '0.9rem', flexShrink: 0 }}>{g.minute}&apos;</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tarjetas */}
+          {matchCards.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>🟨 Amonestaciones</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {matchCards.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg-card2)', borderRadius: 8, border: `1px solid ${c.type === 'yellow' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                    <span>{c.type === 'yellow' ? '🟨' : '🟥'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {c.tournament.name}
+                        <span style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 800, color: c.type === 'yellow' ? 'var(--warning)' : 'var(--danger)' }}>
+                          {c.type === 'yellow' ? 'AMARILLA' : 'ROJA'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                        {c.home?.name} vs {c.away?.name} · R{c.match.round}
+                      </div>
+                    </div>
+                    <span style={{ fontWeight: 800, color: 'var(--primary-light)', fontSize: '0.9rem', flexShrink: 0 }}>{c.minute}&apos;</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cambios */}
+          {matchSubs.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>🔄 Cambios</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {matchSubs.map((s, i) => {
+                  const entered = s.playerInId === player.id;
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg-card2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <span>🔄</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                          <span style={{ color: entered ? 'var(--success)' : 'var(--danger)' }}>
+                            {entered ? '↑ Entró' : '↓ Salió'}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontWeight: 400, fontSize: '0.72rem' }}>— {s.tournament.name}</span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                          {s.home?.name} vs {s.away?.name} · R{s.match.round}
+                        </div>
+                      </div>
+                      <span style={{ fontWeight: 800, color: 'var(--primary-light)', fontSize: '0.9rem', flexShrink: 0 }}>{s.minute}&apos;</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {matchGoals.length === 0 && matchCards.length === 0 && matchSubs.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Sin eventos registrados en partidos aún.
+            </div>
+          )}
         </div>
       ) : (
         <>

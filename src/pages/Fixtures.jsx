@@ -4,6 +4,7 @@ import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LineupEditor from '../components/LineupEditor';
+import MatchPlanilla from '../components/MatchPlanilla';
 import {
   generateLeagueFixtures,
   generateKnockoutBracket,
@@ -394,18 +395,19 @@ function ScoreInput({ value, onChange, label }) {
   );
 }
 
-function MatchRow({ match, teams, onEdit, onDelete, isAdmin, onView, onLineup }) {
+function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineup }) {
   const home = teams.find(t => t.id === match.homeId);
   const away = teams.find(t => t.id === match.awayId);
   if (!home || !away) return null;
 
   const homeColor = getTeamColor(home.colorIndex);
   const awayColor = getTeamColor(away.colorIndex);
+  const hasEvents = (match.goals?.length || 0) + (match.cards?.length || 0) + (match.substitutions?.length || 0) > 0;
 
   return (
     <div
       className="match-card"
-      onClick={onView}
+      onClick={onPlanilla}
       style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(132,204,22,0.35)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = ''}
@@ -474,18 +476,47 @@ function MatchRow({ match, teams, onEdit, onDelete, isAdmin, onView, onLineup })
         {match.status === 'finished' ? 'Final' : 'Pendiente'}
       </span>
 
-      {isAdmin && (
-        <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-          <button className="btn btn-secondary btn-sm btn-icon" onClick={() => onEdit(match)} title="Editar resultado">✏️</button>
-          <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(match.id)} title="Eliminar">🗑</button>
-        </div>
-      )}
-      {/* Alinear — disponible para todos */}
       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* Planilla / poster */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={onPlanilla}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              padding: '3px 7px', borderRadius: 6,
+              border: '1px solid rgba(132,204,22,0.35)',
+              background: hasEvents ? 'rgba(132,204,22,0.15)' : 'rgba(132,204,22,0.06)',
+              color: 'var(--primary-light)', fontWeight: 700, fontSize: '0.62rem',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+            title="Abrir planilla del partido"
+          >
+            📋{hasEvents ? ' ✓' : ''}
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onView(match); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              padding: '3px 7px', borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.62rem',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+            title="Ver poster del partido"
+          >
+            🖼
+          </button>
+          {isAdmin && (
+            <button className="btn btn-danger btn-sm btn-icon" onClick={e => { e.stopPropagation(); onDelete(match.id); }} title="Eliminar">🗑</button>
+          )}
+        </div>
+
+        {/* Alinear — disponible para todos */}
         {[home, away].map(team => (
           <button
             key={team.id}
-            onClick={() => onLineup(match, team)}
+            onClick={e => { e.stopPropagation(); onLineup(match, team); }}
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(132,204,22,0.3)',
@@ -509,14 +540,13 @@ function MatchRow({ match, teams, onEdit, onDelete, isAdmin, onView, onLineup })
 export default function Fixtures() {
   const { activeTournament, dispatch } = useTournament();
   const { isAdmin } = useAuth();
-  const [editMatch, setEditMatch] = useState(null);
-  const [editScores, setEditScores] = useState({ home: '', away: '', date: '', time: '', venue: '' });
   const [showAddMatch, setShowAddMatch] = useState(false);
   const [addForm, setAddForm] = useState({ homeId: '', awayId: '', date: '', time: '', venue: '', round: 1 });
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRound, setFilterRound] = useState('all');
-  const [viewMatch, setViewMatch] = useState(null);
-  const [lineupMatch, setLineupMatch] = useState(null);   // { match, team }
+  const [planillaMatch, setPlanillaMatch] = useState(null);  // planilla del comisario
+  const [viewMatch, setViewMatch] = useState(null);          // poster visual
+  const [lineupMatch, setLineupMatch] = useState(null);      // { match, team }
 
   if (!activeTournament) {
     return (
@@ -541,37 +571,6 @@ export default function Fixtures() {
         ? generateLeagueFixtures(activeTournament.teams)
         : generateKnockoutBracket(activeTournament.teams);
     dispatch({ type: 'SET_MATCHES', payload: { tournamentId: activeTournament.id, matches } });
-  }
-
-  function openEdit(match) {
-    setEditMatch(match);
-    setEditScores({
-      home: match.homeScore ?? '',
-      away: match.awayScore ?? '',
-      date: match.date || '',
-      time: match.time || '',
-      venue: match.venue || '',
-    });
-  }
-
-  function saveResult() {
-    const isFinished = editScores.home !== '' && editScores.away !== '';
-    dispatch({
-      type: 'UPDATE_MATCH',
-      payload: {
-        tournamentId: activeTournament.id,
-        matchId: editMatch.id,
-        data: {
-          homeScore: isFinished ? Number(editScores.home) : null,
-          awayScore: isFinished ? Number(editScores.away) : null,
-          status: isFinished ? 'finished' : 'scheduled',
-          date: editScores.date,
-          time: editScores.time,
-          venue: editScores.venue,
-        },
-      },
-    });
-    setEditMatch(null);
   }
 
   function handleAddMatch(e) {
@@ -729,10 +728,10 @@ export default function Fixtures() {
                           key={m.id}
                           match={m}
                           teams={activeTournament.teams}
-                          onEdit={openEdit}
                           onDelete={deleteMatch}
                           isAdmin={isAdmin}
-                          onView={() => setViewMatch(m)}
+                          onPlanilla={() => setPlanillaMatch(m)}
+                          onView={setViewMatch}
                           onLineup={(match, team) => setLineupMatch({ match, team })}
                         />
                     ))}
@@ -741,100 +740,6 @@ export default function Fixtures() {
               );
             })}
         </div>
-      )}
-
-      {/* Edit result modal */}
-      {editMatch && (
-        <Modal
-          title="Registrar resultado"
-          onClose={() => setEditMatch(null)}
-          footer={
-            <>
-              <button className="btn btn-secondary" onClick={() => setEditMatch(null)}>Cancelar</button>
-              <button className="btn btn-success" onClick={saveResult}>Guardar resultado</button>
-            </>
-          }
-        >
-          {(() => {
-            const home = activeTournament.teams.find(t => t.id === editMatch.homeId);
-            const away = activeTournament.teams.find(t => t.id === editMatch.awayId);
-            return (
-              <div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 20, marginBottom: 24, padding: '16px 0',
-                }}>
-                  <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div
-                      className="team-avatar"
-                      style={{
-                        width: 48, height: 48, margin: '0 auto 8px',
-                        background: getTeamColor(home?.colorIndex) + '22',
-                        color: getTeamColor(home?.colorIndex), fontSize: '1rem',
-                      }}
-                    >
-                      {getInitials(home?.name)}
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{home?.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Local</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <ScoreInput value={editScores.home} onChange={v => setEditScores(s => ({ ...s, home: v }))} label="Local" />
-                    <span style={{ color: 'var(--text-muted)', fontSize: '1.2rem', marginTop: 16 }}>—</span>
-                    <ScoreInput value={editScores.away} onChange={v => setEditScores(s => ({ ...s, away: v }))} label="Visita" />
-                  </div>
-                  <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div
-                      className="team-avatar"
-                      style={{
-                        width: 48, height: 48, margin: '0 auto 8px',
-                        background: getTeamColor(away?.colorIndex) + '22',
-                        color: getTeamColor(away?.colorIndex), fontSize: '1rem',
-                      }}
-                    >
-                      {getInitials(away?.name)}
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{away?.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Visita</div>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Fecha del partido</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={editScores.date}
-                    onChange={e => setEditScores(s => ({ ...s, date: e.target.value }))}
-                  />
-                </div>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">🕐 Hora</label>
-                    <input
-                      type="time"
-                      className="form-input"
-                      value={editScores.time}
-                      onChange={e => setEditScores(s => ({ ...s, time: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">📍 Cancha / Sede</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Ej: Cancha Principal"
-                      value={editScores.venue}
-                      onChange={e => setEditScores(s => ({ ...s, venue: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                  Deja los marcadores vacíos para marcarlo como pendiente.
-                </p>
-              </div>
-            );
-          })()}
-        </Modal>
       )}
 
       {/* Add match manual */}
@@ -934,8 +839,18 @@ export default function Fixtures() {
         />
       )}
 
+      {/* Planilla del comisario */}
+      {planillaMatch && (
+        <MatchPlanilla
+          match={planillaMatch}
+          tournament={activeTournament}
+          onClose={() => setPlanillaMatch(null)}
+        />
+      )}
+
       {/* Match Poster Modal */}
-      {viewMatch && (() => {        const home = activeTournament.teams.find(t => t.id === viewMatch.homeId);
+      {viewMatch && (() => {
+        const home = activeTournament.teams.find(t => t.id === viewMatch.homeId);
         const away = activeTournament.teams.find(t => t.id === viewMatch.awayId);
         return (
           <MatchPosterModal

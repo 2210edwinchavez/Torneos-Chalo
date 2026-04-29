@@ -335,6 +335,20 @@ function reducer(state, action) {
       };
     }
 
+    case 'UPDATE_TEAM': {
+      const { tournamentId, teamId, data } = action.payload;
+      return {
+        ...state,
+        tournaments: state.tournaments.map(t => {
+          if (t.id !== tournamentId) return t;
+          return {
+            ...t,
+            teams: t.teams.map(tm => tm.id === teamId ? { ...tm, ...data } : tm),
+          };
+        }),
+      };
+    }
+
     case 'UPDATE_LINEUP': {
       const { matchId, teamId, lineup } = action.payload;
       return {

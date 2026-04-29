@@ -57,6 +57,10 @@ export default function Sidebar({ isOpen, onClose }) {
           <span className="nav-icon">👤</span> Jugadores
         </NavLink>
 
+        <NavLink to="/goleadores" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={handleNav}>
+          <span className="nav-icon">⚽</span> Goleadores
+        </NavLink>
+
         {activeTournament && (
           <>
             <p className="sidebar-section-label" style={{ marginTop: 16 }}>

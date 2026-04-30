@@ -1,16 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
+import TournamentShieldThumb from './TournamentShieldThumb';
 import { getTeamColor } from '../utils/helpers';
-
-const SPORT_ICONS = {
-  'Fútbol': '⚽',
-  'Baloncesto': '🏀',
-  'Tenis': '🎾',
-  'Voleibol': '🏐',
-  'Béisbol': '⚾',
-  'Otro': '🏆',
-};
 
 export default function Sidebar({ isOpen, onClose }) {
   const { state, dispatch, activeTournament } = useTournament();
@@ -31,7 +23,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className="sidebar-logo">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }} />
+            <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 36, height: 36, objectFit: 'contain' }} />
             <h1 style={{ margin: 0 }}>{APP_DISPLAY_NAME}</h1>
           </div>
           <button
@@ -47,7 +39,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <p className="sidebar-section-label">General</p>
 
         <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={handleNav}>
-          <span className="nav-icon">📊</span> Dashboard
+          <span className="nav-icon">🏠</span> Inicio
         </NavLink>
 
         <NavLink to="/torneos" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} onClick={handleNav}>
@@ -76,8 +68,17 @@ export default function Sidebar({ isOpen, onClose }) {
                 border: '1px solid rgba(132,204,22,0.2)',
               }}
             >
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-light)' }}>
-                {SPORT_ICONS[activeTournament.sport] || '🏆'} {activeTournament.name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <TournamentShieldThumb
+                  shield={activeTournament.shield}
+                  sport={activeTournament.sport}
+                  colorIndex={Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id))}
+                  size={36}
+                  imgStyle={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))' }}
+                />
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-light)', flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                  {activeTournament.name}
+                </div>
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                 {activeTournament.type === 'league' ? 'Liga' : 'Eliminatoria'} · {activeTournament.teams.length} equipos

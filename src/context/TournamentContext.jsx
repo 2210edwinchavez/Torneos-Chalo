@@ -124,6 +124,7 @@ function reducer(state, action) {
         gameSystem: p.gameSystem || '',
         regulations: p.regulations || '',
         awards: p.awards || '',
+        shield: p.shield || null,
         teams: [],
         matches: [],
       };

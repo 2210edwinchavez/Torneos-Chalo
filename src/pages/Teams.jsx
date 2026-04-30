@@ -4,6 +4,7 @@ import { useTournament, findPlayerEnrollment, getPaymentStatus } from '../contex
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { getTeamColor, getInitials, formatDate } from '../utils/helpers';
 import { loadPendingSubmissions, updateSubmissionStatus, supabaseConfigured } from '../lib/supabase';
 
@@ -1327,7 +1328,7 @@ function TeamCard({ team, tournament, dispatch }) {
 
 /* ─── Main Page ─── */
 export default function Teams() {
-  const { activeTournament, dispatch } = useTournament();
+  const { activeTournament, dispatch, state } = useTournament();
   const { isAdmin } = useAuth();
   const { formatMoney: formatMoneyTeams } = useCurrency();
   const [showTeamModal, setShowTeamModal] = useState(false);
@@ -1351,6 +1352,8 @@ export default function Teams() {
   );
 
   const totalEnrollments = activeTournament.teams.reduce((s, t) => s + (t.enrollments?.length || 0), 0);
+
+  const tournIdx = Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id));
 
   const [shieldError, setShieldError] = useState(false);
 
@@ -1376,11 +1379,14 @@ export default function Teams() {
   return (
     <div>
       <div className="page-header">
-        <div>
-          <div className="page-title">Equipos</div>
-          <div className="page-subtitle">
-            {activeTournament.name} · {activeTournament.teams.length} equipo{activeTournament.teams.length !== 1 ? 's' : ''}
-            {totalEnrollments > 0 && ` · ${totalEnrollments} jugador${totalEnrollments !== 1 ? 'es' : ''} inscritos`}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <TournamentShieldThumb shield={activeTournament.shield} sport={activeTournament.sport} colorIndex={tournIdx} size={44} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="page-title">Equipos</div>
+            <div className="page-subtitle">
+              {activeTournament.name} · {activeTournament.teams.length} equipo{activeTournament.teams.length !== 1 ? 's' : ''}
+              {totalEnrollments > 0 && ` · ${totalEnrollments} jugador${totalEnrollments !== 1 ? 'es' : ''} inscritos`}
+            </div>
           </div>
         </div>
         {isAdmin && <button className="btn btn-primary btn-lg" onClick={() => setShowTeamModal(true)}>+ Agregar equipo</button>}

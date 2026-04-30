@@ -1,8 +1,8 @@
 /** Nombre público de la aplicación (UI, exportaciones PNG, compartir). */
 export const APP_DISPLAY_NAME = 'CHALOSPORTS';
 
-/** Logo en `public/` (nombre con espacio → codificado para URL). */
-export const APP_LOGO_URL = '/' + encodeURIComponent('chalosport logo.jpeg');
+/** Logo PNG con transparencia en `public/`. */
+export const APP_LOGO_URL = '/chalosport-logo.png';
 
 /** Host para pies de página en imágenes (sin protocolo). */
 export function appSiteHostname() {

@@ -2,12 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { loadStatePublic, submitPlayerRegistration } from '../lib/supabase';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { getTeamColor, getInitials } from '../utils/helpers';
-
-const SPORT_ICONS = {
-  'Fútbol': '⚽', 'Baloncesto': '🏀', 'Tenis': '🎾',
-  'Voleibol': '🏐', 'Béisbol': '⚾', 'Otro': '🏆',
-};
 
 const EMPTY_FORM = {
   firstName: '', lastName: '', docNumber: '',
@@ -231,7 +227,7 @@ export default function PlayerRegistration() {
     }}>
       {/* Header de la app */}
       <div style={{ width: '100%', maxWidth: 480, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 32, height: 32, objectFit: 'contain' }} />
         <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#84cc16' }}>{APP_DISPLAY_NAME}</span>
       </div>
 
@@ -252,8 +248,9 @@ export default function PlayerRegistration() {
             }
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f1f5f9' }}>{team.name}</div>
-              <div style={{ fontSize: '0.78rem', color: '#a1b89a', marginTop: 3 }}>
-                {SPORT_ICONS[tournament.sport] || '🏆'} {tournament.name}
+              <div style={{ fontSize: '0.78rem', color: '#a1b89a', marginTop: 3, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <TournamentShieldThumb shield={tournament.shield} sport={tournament.sport} colorIndex={0} size={22} />
+                <span>{tournament.name}</span>
               </div>
               {team.coach && <div style={{ fontSize: '0.72rem', color: '#5a7353', marginTop: 2 }}>👔 {team.coach}</div>}
             </div>

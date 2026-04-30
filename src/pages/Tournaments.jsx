@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
-import { formatDate, getTeamColor } from '../utils/helpers';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
+import { formatDate } from '../utils/helpers';
 
 const SPORTS = ['Fútbol', 'Baloncesto', 'Tenis', 'Voleibol', 'Béisbol', 'Otro'];
 const SPORT_ICONS = {
@@ -16,7 +17,129 @@ const EMPTY_FORM = {
   startDate: '', endDate: '', description: '', inscriptionFee: '',
   playerLimit: '25',
   venue: '', matchFee: '', gameSystem: '', regulations: '', awards: '',
+  shield: null,
 };
+
+/* ─── Escudo del torneo (subida) ─── */
+function TournamentShieldPicker({ value, onChange }) {
+  const inputRef = useRef(null);
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Solo imágenes (JPG, PNG, WEBP, SVG).');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      alert('El escudo no puede superar 4 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => onChange(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => handleFile(e.target.files[0])}
+      />
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => {
+          e.preventDefault();
+          handleFile(e.dataTransfer.files[0]);
+        }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          padding: value ? 16 : 22,
+          borderRadius: 12,
+          border: `2px ${value ? 'solid' : 'dashed'} ${value ? 'var(--primary)' : 'var(--border)'}`,
+          background: value ? 'rgba(132,204,22,0.06)' : 'var(--bg-card2)',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+        }}
+      >
+        {value ? (
+          <>
+            <img
+              src={value}
+              alt=""
+              style={{
+                width: 96,
+                height: 96,
+                objectFit: 'contain',
+                borderRadius: 8,
+                filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))',
+              }}
+            />
+            <div style={{ fontSize: '0.78rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+              Escudo cargado · haz clic o arrastra otro archivo
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{
+              width: 72,
+              height: 72,
+              borderRadius: '50%',
+              background: 'var(--bg-card)',
+              border: '2px dashed var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2rem',
+            }}
+            >
+              🏆
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                Sube el logo del torneo
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Aparecerá en la tarjeta, menú y cabeceras · JPG, PNG, WEBP, SVG · máx 4 MB
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={e => {
+            e.stopPropagation();
+            inputRef.current?.click();
+          }}
+        >
+          📁 Elegir archivo
+        </button>
+        {value && (
+          <button
+            type="button"
+            className="btn btn-danger btn-sm"
+            onClick={e => {
+              e.stopPropagation();
+              onChange(null);
+            }}
+          >
+            Quitar imagen
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Info row inside card ─── */
 function InfoRow({ icon, label, value }) {
@@ -39,11 +162,15 @@ function InfoRow({ icon, label, value }) {
 /* ─── Tournament Card ─── */
 function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleStatus }) {
   const { formatMoney } = useCurrency();
+  const { isAdmin } = useAuth();
   const [showInfo, setShowInfo] = useState(false);
 
   const played = t.matches.filter(m => m.status === 'finished').length;
 
-  const hasInfo = t.venue || t.matchFee > 0 || t.gameSystem || t.regulations || t.awards;
+  function toggleShieldInfo(e) {
+    e.preventDefault();
+    setShowInfo(v => !v);
+  }
 
   return (
     <div
@@ -60,13 +187,23 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
         </span>
       )}
 
-      {/* Header */}
+      {/* Header — clic en escudo muestra/oculta toda la información del torneo */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
-        <div
-          className="team-avatar"
-          style={{ width: 48, height: 48, fontSize: '1.4rem', background: getTeamColor(i) + '22', color: getTeamColor(i), flexShrink: 0 }}
-        >
-          {SPORT_ICONS[t.sport] || '🏆'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, gap: 4 }}>
+          <button
+            type="button"
+            className="tournament-card-shield-btn"
+            aria-label={showInfo ? 'Ocultar información del torneo' : 'Ver información del torneo'}
+            aria-expanded={showInfo}
+            onClick={toggleShieldInfo}
+          >
+            <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={48} />
+          </button>
+          {!t.shield && isAdmin && (
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--primary-light)', textAlign: 'center', lineHeight: 1.25, maxWidth: 72 }}>
+              Sin logo · Editar
+            </span>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0, paddingRight: isActive ? 60 : 0 }}>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: 6 }}>
@@ -130,28 +267,44 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
         )}
       </div>
 
-      {/* Expandable info section */}
-      {hasInfo && (
-        <>
-          <button
-            className="btn btn-ghost w-full"
-            style={{ justifyContent: 'space-between', padding: '7px 10px', marginBottom: showInfo ? 12 : 14, borderRadius: 8, border: '1px solid var(--border)' }}
-            onClick={() => setShowInfo(v => !v)}
-          >
-            <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>📋 Información del torneo</span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{showInfo ? '▲ Ocultar' : '▼ Ver todo'}</span>
-          </button>
+      {/* Información ampliable — también se abre con clic en el escudo */}
+      <button
+        type="button"
+        className="btn btn-ghost w-full"
+        style={{ justifyContent: 'space-between', padding: '7px 10px', marginBottom: showInfo ? 12 : 14, borderRadius: 8, border: '1px solid var(--border)' }}
+        aria-expanded={showInfo}
+        onClick={() => setShowInfo(v => !v)}
+      >
+        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>📋 Información del torneo</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{showInfo ? '▲ Ocultar' : '▼ Ver todo'}</span>
+      </button>
 
-          {showInfo && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, padding: '14px 14px 4px', background: 'var(--bg-card2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <InfoRow icon="📍" label="Cancha / Sede" value={t.venue} />
-              <InfoRow icon="💵" label="Valor por partido" value={t.matchFee > 0 ? formatMoney(t.matchFee) : null} />
-              <InfoRow icon="⚽" label="Sistema de juego" value={t.gameSystem} />
-              <InfoRow icon="📜" label="Reglamento" value={t.regulations} />
-              <InfoRow icon="🏅" label="Premiación" value={t.awards} />
-            </div>
-          )}
-        </>
+      {showInfo && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, padding: '14px 14px 4px', background: 'var(--bg-card2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <InfoRow
+            icon="📅"
+            label="Fechas"
+            value={
+              [t.startDate && formatDate(t.startDate), t.endDate ? formatDate(t.endDate) : null].filter(Boolean).join(' → ') || null
+            }
+          />
+          <InfoRow
+            icon="💰"
+            label="Valor inscripción"
+            value={t.inscriptionFee > 0 ? formatMoney(t.inscriptionFee) : null}
+          />
+          <InfoRow
+            icon="💵"
+            label="Valor por partido"
+            value={t.matchFee > 0 ? formatMoney(t.matchFee) : null}
+          />
+          <InfoRow icon="👥" label="Cupo jugadores por equipo" value={t.playerLimit != null && Number(t.playerLimit) > 0 ? String(Number(t.playerLimit)) : null} />
+          <InfoRow icon="📝" label="Descripción" value={t.description} />
+          <InfoRow icon="📍" label="Cancha / Sede" value={t.venue} />
+          <InfoRow icon="⚽" label="Sistema de juego" value={t.gameSystem} />
+          <InfoRow icon="📜" label="Reglamento" value={t.regulations} />
+          <InfoRow icon="🏅" label="Premiación" value={t.awards} />
+        </div>
       )}
 
       {/* Actions */}
@@ -203,7 +356,7 @@ function TournamentModal({ editId, form, setForm, onClose, onSubmit }) {
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: 16 }}>
         <button className={`tab${tab === 'basic' ? ' active' : ''}`} onClick={() => setTab('basic')}>
-          📋 Información básica
+          📋 Datos · logo
         </button>
         <button className={`tab${tab === 'details' ? ' active' : ''}`} onClick={() => setTab('details')}>
           🏟️ Detalles del torneo
@@ -214,6 +367,17 @@ function TournamentModal({ editId, form, setForm, onClose, onSubmit }) {
         {/* ── Tab: Basic ── */}
         {tab === 'basic' && (
           <>
+            <div className="form-group">
+              <label className="form-label">Logo / escudo del torneo</label>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                Opcional. Si no subes una imagen, se usará el icono del deporte en la lista y menús.
+              </div>
+              <TournamentShieldPicker
+                value={form.shield}
+                onChange={shield => setForm(f => ({ ...f, shield }))}
+              />
+            </div>
+
             <div className="form-group">
               <label className="form-label">Nombre del torneo *</label>
               <input
@@ -376,6 +540,7 @@ export default function Tournaments() {
       playerLimit: t.playerLimit || '25',
       venue: t.venue || '', gameSystem: t.gameSystem || '',
       regulations: t.regulations || '', awards: t.awards || '',
+      shield: t.shield || null,
     });
     setEditId(t.id);
     setShowCreate(true);

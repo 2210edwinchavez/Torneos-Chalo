@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { calcStandings, getTeamColor, getInitials } from '../utils/helpers';
 
 function MiniBar({ value, max, color }) {
@@ -23,7 +24,7 @@ function MiniBar({ value, max, color }) {
 }
 
 export default function Standings() {
-  const { activeTournament } = useTournament();
+  const { activeTournament, state } = useTournament();
 
   const standings = useMemo(() => {
     if (!activeTournament) return [];
@@ -64,13 +65,17 @@ export default function Standings() {
 
   const maxPts = Math.max(...standings.map(r => r.pts), 1);
   const maxGf = Math.max(...standings.map(r => r.gf), 1);
+  const tournIdx = Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id));
 
   return (
     <div>
       <div className="page-header">
-        <div>
-          <div className="page-title">Tabla de Posiciones</div>
-          <div className="page-subtitle">{activeTournament.name}</div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <TournamentShieldThumb shield={activeTournament.shield} sport={activeTournament.sport} colorIndex={tournIdx} size={44} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="page-title">Tabla de Posiciones</div>
+            <div className="page-subtitle">{activeTournament.name}</div>
+          </div>
         </div>
       </div>
 

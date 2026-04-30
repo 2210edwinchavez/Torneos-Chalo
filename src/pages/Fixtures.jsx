@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LineupEditor from '../components/LineupEditor';
 import MatchPlanilla from '../components/MatchPlanilla';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import {
   generateLeagueFixtures,
   generateKnockoutBracket,
@@ -570,7 +571,7 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
 }
 
 export default function Fixtures() {
-  const { activeTournament, dispatch } = useTournament();
+  const { activeTournament, dispatch, state } = useTournament();
   const { isAdmin } = useAuth();
   const [showAddMatch, setShowAddMatch] = useState(false);
   const [addForm, setAddForm] = useState({ homeId: '', awayId: '', date: '', time: '', venue: '', round: 1 });
@@ -648,13 +649,23 @@ export default function Fixtures() {
   const played = activeTournament.matches.filter(m => m.status === 'finished').length;
   const total = activeTournament.matches.length;
 
+  const tournIdx = Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id));
+
   return (
     <div>
       <div className="page-header">
-        <div>
-          <div className="page-title">Partidos</div>
-          <div className="page-subtitle">
-            {activeTournament.name} · {played}/{total} partidos jugados
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <TournamentShieldThumb
+            shield={activeTournament.shield}
+            sport={activeTournament.sport}
+            colorIndex={tournIdx}
+            size={44}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="page-title">Partidos</div>
+            <div className="page-subtitle">
+              {activeTournament.name} · {played}/{total} partidos jugados
+            </div>
           </div>
         </div>
         {isAdmin && (

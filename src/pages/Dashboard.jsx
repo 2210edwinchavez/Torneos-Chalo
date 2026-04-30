@@ -3,15 +3,11 @@ import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { formatDate, getTeamColor, getInitials, calcStandings } from '../utils/helpers';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-
-const SPORT_ICONS = {
-  'Fútbol': '⚽', 'Baloncesto': '🏀', 'Tenis': '🎾',
-  'Voleibol': '🏐', 'Béisbol': '⚾', 'Otro': '🏆',
-};
 
 function StatCard({ label, value, icon, color, sub }) {
   return (
@@ -25,15 +21,13 @@ function StatCard({ label, value, icon, color, sub }) {
 }
 
 /* ─── Tournament Detail Modal (para usuarios) ─── */
-function TournamentDetailModal({ tournament, onClose }) {
+function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
   const [tab, setTab] = useState('info');
   const standings = useMemo(() => calcStandings(tournament.teams, tournament.matches), [tournament]);
   const color = '#84cc16';
 
   const played = tournament.matches.filter(m => m.status === 'finished');
   const upcoming = tournament.matches.filter(m => m.status !== 'finished');
-
-  const SPORT_ICONS_LOCAL = { 'Fútbol':'⚽','Baloncesto':'🏀','Tenis':'🎾','Voleibol':'🏐','Béisbol':'⚾','Otro':'🏆' };
 
   return (
     <div
@@ -52,7 +46,7 @@ function TournamentDetailModal({ tournament, onClose }) {
         {/* Cabecera */}
         <div style={{ background:'linear-gradient(135deg,#071207,#0d200d)', padding:'20px 20px 0', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom:16 }}>
-            <div style={{ fontSize:'2.2rem' }}>{SPORT_ICONS_LOCAL[tournament.sport] || '🏆'}</div>
+            <TournamentShieldThumb shield={tournament.shield} sport={tournament.sport} colorIndex={colorIndex} size={56} />
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontWeight:800, fontSize:'1.2rem', color:'#f1f5f9' }}>{tournament.name}</div>
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6 }}>
@@ -332,7 +326,6 @@ function TournamentDetailModal({ tournament, onClose }) {
 /* ─── User Dashboard ─── */
 function UserDashboard({ tournaments, session }) {
   const [selected, setSelected] = useState(null);
-  const SPORT_ICONS_LOCAL = { 'Fútbol':'⚽','Baloncesto':'🏀','Tenis':'🎾','Voleibol':'🏐','Béisbol':'⚾','Otro':'🏆' };
 
   if (tournaments.length === 0) {
     return (
@@ -371,9 +364,7 @@ function UserDashboard({ tournaments, session }) {
               <div className="card" style={{ border:`1px solid ${tc}33`, borderTop:`3px solid ${tc}`, height:'100%' }}>
                 {/* Header */}
                 <div style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:14 }}>
-                  <div style={{ fontSize:'2rem',width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',background:tc+'22',borderRadius:12,flexShrink:0 }}>
-                    {SPORT_ICONS_LOCAL[t.sport]||'🏆'}
-                  </div>
+                  <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
                   <div style={{ flex:1,minWidth:0 }}>
                     <div style={{ fontWeight:800,fontSize:'1rem',color:'var(--text-primary)',marginBottom:6 }}>{t.name}</div>
                     <div style={{ display:'flex',gap:5,flexWrap:'wrap' }}>
@@ -426,7 +417,11 @@ function UserDashboard({ tournaments, session }) {
       </div>
 
       {selected && (
-        <TournamentDetailModal tournament={selected} onClose={() => setSelected(null)} />
+        <TournamentDetailModal
+          tournament={selected}
+          colorIndex={Math.max(0, tournaments.findIndex(tm => tm.id === selected.id))}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
@@ -639,12 +634,7 @@ export default function Dashboard() {
                   transition: 'all 0.15s',
                 }}
               >
-                <div
-                  className="team-avatar"
-                  style={{ background: getTeamColor(i) + '33', color: getTeamColor(i), fontSize: '1rem' }}
-                >
-                  {SPORT_ICONS[t.sport] || '🏆'}
-                </div>
+                <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.name}

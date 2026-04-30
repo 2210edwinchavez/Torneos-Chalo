@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { getTeamColor, getInitials, getRoundName } from '../utils/helpers';
 
 function BracketMatch({ match, teams, onEdit }) {
@@ -61,7 +62,7 @@ function BracketMatch({ match, teams, onEdit }) {
 }
 
 export default function Bracket() {
-  const { activeTournament, dispatch } = useTournament();
+  const { activeTournament, dispatch, state } = useTournament();
   const { isAdmin } = useAuth();
   const [editMatch, setEditMatch] = useState(null);
   const [scores, setScores] = useState({ home: '', away: '' });
@@ -138,14 +139,23 @@ export default function Bracket() {
 
   const played = activeTournament.matches.filter(m => m.status === 'finished').length;
   const total = activeTournament.matches.length;
+  const tournIdx = Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id));
 
   return (
     <div>
       <div className="page-header">
-        <div>
-          <div className="page-title">Bracket</div>
-          <div className="page-subtitle">
-            {activeTournament.name} · {played}/{total} partidos jugados
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <TournamentShieldThumb
+            shield={activeTournament.shield}
+            sport={activeTournament.sport}
+            colorIndex={tournIdx}
+            size={44}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="page-title">Bracket</div>
+            <div className="page-subtitle">
+              {activeTournament.name} · {played}/{total} partidos jugados
+            </div>
           </div>
         </div>
         <Link to="/partidos" className="btn btn-secondary">

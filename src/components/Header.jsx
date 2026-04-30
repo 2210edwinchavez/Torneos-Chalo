@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTournament } from '../context/TournamentContext';
 import { useCurrency, CURRENCIES } from '../context/CurrencyContext';
-import { APP_DISPLAY_NAME } from '../constants/branding';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import Modal from './Modal';
+import TournamentShieldThumb from './TournamentShieldThumb';
 
 const PAGE_INFO = {
-  '/': { title: 'Dashboard', subtitle: 'Resumen general de tus torneos' },
+  '/': { title: 'Inicio', subtitle: 'Resumen general de tus torneos' },
   '/torneos': { title: 'Torneos', subtitle: 'Gestiona todos tus torneos' },
   '/jugadores': { title: 'Jugadores', subtitle: 'Registro universal de jugadores' },
   '/equipos': { title: 'Equipos', subtitle: 'Equipos del torneo activo' },
@@ -17,7 +18,7 @@ const PAGE_INFO = {
 };
 
 export default function Header({ currentPath, onMenuToggle }) {
-  const { activeTournament } = useTournament();
+  const { activeTournament, state } = useTournament();
   const { session, isAdmin, logout, changePassword } = useAuth();
   const { currency, setCurrency } = useCurrency();
   const info = PAGE_INFO[currentPath] || { title: APP_DISPLAY_NAME, subtitle: '' };
@@ -30,21 +31,45 @@ export default function Header({ currentPath, onMenuToggle }) {
   const [shareCopied, setShareCopied] = useState(false);
 
   async function handleShare() {
-    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const shareData = {
-      title: APP_DISPLAY_NAME,
-      text: `¡Únete a ${APP_DISPLAY_NAME}! Gestiona equipos, jugadores, partidos y tabla de posiciones.`,
-      url: appUrl,
+    const appUrl = String(import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
+    const text = `¡Únete a ${APP_DISPLAY_NAME}! Gestiona equipos, jugadores, partidos y tabla de posiciones.`;
+    const title = APP_DISPLAY_NAME;
+
+    const tryShareWithLogoFile = async () => {
+      if (!navigator.share) return false;
+      const logoAbs = new URL(APP_LOGO_URL, window.location.origin).href;
+      const res = await fetch(logoAbs);
+      if (!res.ok) return false;
+      const blob = await res.blob();
+      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+      const file = new File([blob], `chalosports-logo.${ext}`, { type: blob.type || 'image/jpeg' });
+      const payload = { title, text, url: appUrl, files: [file] };
+      if (navigator.canShare && !navigator.canShare({ files: payload.files })) return false;
+      await navigator.share(payload);
+      return true;
     };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(appUrl);
-        setShareCopied(true);
-        setTimeout(() => setShareCopied(false), 2500);
-      } catch {}
+
+    try {
+      const ok = await tryShareWithLogoFile();
+      if (ok) return;
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
     }
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url: appUrl });
+        return;
+      }
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(appUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch { /* noop */ }
   }
 
   async function handleChangePw(e) {
@@ -105,7 +130,14 @@ export default function Header({ currentPath, onMenuToggle }) {
           </div>
 
           {activeTournament && (
-            <div className="header-tournament" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="header-tournament" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <TournamentShieldThumb
+                shield={activeTournament.shield}
+                sport={activeTournament.sport}
+                colorIndex={Math.max(0, state.tournaments.findIndex(t => t.id === activeTournament.id))}
+                size={28}
+                imgStyle={{ filter: 'drop-shadow(0 1px 5px rgba(0,0,0,0.45))' }}
+              />
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: activeTournament.status === 'active' ? 'var(--success)' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
               <span className="header-tournament-name" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                 {activeTournament.name}
@@ -116,25 +148,40 @@ export default function Header({ currentPath, onMenuToggle }) {
           {/* Share button */}
           <div style={{ position: 'relative' }}>
             <button
+              type="button"
+              className="header-share-btn"
               onClick={handleShare}
-              title="Compartir plataforma"
+              title="Compartir app — en algunos dispositivos se adjunta también el logo"
+              aria-label="Compartir la aplicación CHALOSPORTS"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(132,204,22,0.25)',
-                background: shareCopied ? 'rgba(132,204,22,0.2)' : 'rgba(255,255,255,0.05)',
+                gap: 6,
+                minWidth: 36, height: 36,
+                padding: '0 8px',
+                borderRadius: 8, border: '1px solid rgba(132,204,22,0.35)',
+                background: shareCopied ? 'rgba(132,204,22,0.22)' : 'rgba(132,204,22,0.08)',
                 cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
+                color: shareCopied ? 'var(--primary-light)' : 'var(--text-muted)',
               }}
             >
               {shareCopied ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#84cc16" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#84cc16" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span className="header-share-feedback-text" style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.04em' }}>COPIADO</span>
+                </>
               ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  <span className="header-share-label" style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--primary-light)' }}>
+                    COMPARTIR
+                  </span>
+                </>
               )}
             </button>
             {shareCopied && (

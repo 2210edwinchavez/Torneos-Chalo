@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import { generateId } from '../utils/helpers';
 import { loadStateFromDB, saveStateToDB } from '../lib/supabase';
 
@@ -425,6 +425,12 @@ export function TournamentProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE, getLocalState);
   const [dbLoading, setDbLoading] = useState(true);
   const [dbReady, setDbReady] = useState(false);
+  const stateRef = useRef(state);
+  const saveTimerRef = useRef(null);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   /* Load from Supabase on mount, overwrite local state if DB has data */
   useEffect(() => {
@@ -447,15 +453,49 @@ export function TournamentProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Save to Supabase and localStorage after every state change (debounced 800ms) */
+  /* Persist: localStorage siempre; Supabase con debounce + volcado al cerrar/cambiar de pestaña */
   useEffect(() => {
     if (!dbReady) return;
-    localStorage.setItem('torneosjcsport_v2', JSON.stringify(state));
-    const timer = setTimeout(() => {
+    try {
+      localStorage.setItem('torneosjcsport_v2', JSON.stringify(state));
+    } catch (e) {
+      console.error('No se pudo guardar en localStorage (cupo lleno o privado):', e);
+    }
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
       saveStateToDB(state);
-    }, 800);
-    return () => clearTimeout(timer);
+    }, 500);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [state, dbReady]);
+
+  /* Al ocultar pestaña o cerrar: enviar de inmediato para no perder datos en la nube */
+  useEffect(() => {
+    if (!dbReady) return;
+
+    function cloudFlush() {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      saveStateToDB(stateRef.current);
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') cloudFlush();
+    }
+
+    window.addEventListener('pagehide', cloudFlush);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', cloudFlush);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [dbReady]);
 
   const activeTournament =
     state.tournaments.find(t => t.id === state.activeTournamentId) ||

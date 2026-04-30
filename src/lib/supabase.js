@@ -23,28 +23,52 @@ export const supabase = createClient(
 
 const STATE_ID = 'main';
 
-export async function loadStateFromDB() {
-  const { data, error } = await supabase
-    .from('app_state')
-    .select('data')
-    .eq('id', STATE_ID)
-    .single();
+const SAVE_MAX_ATTEMPTS = 4;
+const SAVE_BASE_DELAY_MS = 350;
+const LOAD_MAX_ATTEMPTS = 3;
+const LOAD_BASE_DELAY_MS = 300;
 
-  if (error) {
-    console.error('Error cargando desde Supabase:', error.message);
-    return null;
-  }
-  return data?.data ?? null;
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
-export async function saveStateToDB(state) {
-  const { error } = await supabase
-    .from('app_state')
-    .upsert({ id: STATE_ID, data: state, updated_at: new Date().toISOString() });
+export async function loadStateFromDB() {
+  if (!configured) return null;
+  for (let attempt = 1; attempt <= LOAD_MAX_ATTEMPTS; attempt++) {
+    const { data, error } = await supabase
+      .from('app_state')
+      .select('data')
+      .eq('id', STATE_ID)
+      .single();
 
-  if (error) {
-    console.error('Error guardando en Supabase:', error.message);
+    if (!error) return data?.data ?? null;
+    console.error(`Error cargando desde Supabase (intento ${attempt}/${LOAD_MAX_ATTEMPTS}):`, error.message);
+    if (attempt < LOAD_MAX_ATTEMPTS) await sleep(LOAD_BASE_DELAY_MS * attempt);
   }
+  return null;
+}
+
+/**
+ * Guarda el estado en la nube con reintentos (red inestable / rate limits).
+ * @returns {{ ok: boolean, error?: string }}
+ */
+export async function saveStateToDB(state) {
+  if (!configured) return { ok: false, error: 'Supabase no configurado' };
+
+  let lastMessage = '';
+  for (let attempt = 1; attempt <= SAVE_MAX_ATTEMPTS; attempt++) {
+    const { error } = await supabase
+      .from('app_state')
+      .upsert({ id: STATE_ID, data: state, updated_at: new Date().toISOString() });
+
+    if (!error) return { ok: true };
+    lastMessage = error.message;
+    console.error(`Error guardando en Supabase (intento ${attempt}/${SAVE_MAX_ATTEMPTS}):`, error.message);
+    if (attempt < SAVE_MAX_ATTEMPTS) {
+      await sleep(SAVE_BASE_DELAY_MS * 2 ** (attempt - 1));
+    }
+  }
+  return { ok: false, error: lastMessage };
 }
 
 /** Lee el estado público sin autenticación (necesita política anon en Supabase) */

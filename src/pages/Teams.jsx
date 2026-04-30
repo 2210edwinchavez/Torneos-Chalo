@@ -1411,7 +1411,7 @@ export default function Teams() {
           {isAdmin && <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={() => setShowTeamModal(true)}>+ Agregar primer equipo</button>}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <div className="teams-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
           {filtered.map(team => (
             <TeamCard key={team.id} team={team} tournament={activeTournament} dispatch={dispatch} />
           ))}

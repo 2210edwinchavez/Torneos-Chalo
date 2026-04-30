@@ -131,7 +131,7 @@ function TournamentDetailModal({ tournament, onClose }) {
 
           {/* ── Equipos ── */}
           {tab==='equipos' && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,260px),1fr))', gap:12 }}>
               {tournament.teams.length === 0 && (
                 <div style={{ color:'var(--text-muted)',fontSize:'0.85rem',gridColumn:'1/-1',textAlign:'center',padding:'30px 0' }}>Sin equipos registrados</div>
               )}
@@ -352,7 +352,7 @@ function UserDashboard({ tournaments, session }) {
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,280px),1fr))', gap:16 }}>
         {tournaments.map((t, i) => {
           const played = t.matches.filter(m => m.status==='finished').length;
           const tc = getTeamColor(i);

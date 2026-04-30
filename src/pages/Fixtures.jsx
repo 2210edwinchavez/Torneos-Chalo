@@ -404,6 +404,30 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
   const awayColor = getTeamColor(away.colorIndex);
   const hasEvents = (match.goals?.length || 0) + (match.cards?.length || 0) + (match.substitutions?.length || 0) > 0;
 
+  const shieldBtnStyle = {
+    padding: '8px',
+    margin: '-8px',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    borderRadius: 12,
+    flexShrink: 0,
+    lineHeight: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 44,
+    transition: 'box-shadow 0.15s, transform 0.15s',
+    boxShadow: 'inset 0 0 0 1px rgba(132,204,22,0.28)',
+  };
+
+  function lineupFromShield(e, team) {
+    e.preventDefault();
+    e.stopPropagation();
+    onLineup(match, team);
+  }
+
   return (
     <div
       className="match-card"
@@ -412,7 +436,7 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(132,204,22,0.35)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = ''}
     >
-      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: 60, textAlign: 'center' }}>
+      <div className="match-card-meta" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: 60, textAlign: 'center' }}>
         {match.date ? formatDate(match.date) : 'Sin fecha'}
         {match.time && (
           <div style={{ fontSize: '0.72rem', color: 'var(--primary-light)', fontWeight: 700, marginTop: 1 }}>
@@ -431,10 +455,19 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
 
       <div className="match-teams">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-          {home.shield
-            ? <img src={home.shield} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.4))' }} />
-            : <div className="team-avatar" style={{ background: homeColor + '22', color: homeColor, fontSize: '0.75rem' }}>{getInitials(home.name)}</div>
-          }
+          <button
+            type="button"
+            className="match-team-shield-btn"
+            onClick={e => lineupFromShield(e, home)}
+            title={`Convocatoria y alineación — ${home.name}`}
+            aria-label={`Convocatoria y alineación ${home.name}`}
+            style={shieldBtnStyle}
+          >
+            {home.shield
+              ? <img src={home.shield} alt="" style={{ width: 32, height: 32, objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.4))' }} />
+              : <div className="team-avatar" style={{ background: homeColor + '22', color: homeColor, fontSize: '0.75rem', pointerEvents: 'none' }}>{getInitials(home.name)}</div>
+            }
+          </button>
           <span
             className="match-team-name"
             style={{ color: match.status === 'finished' && Number(match.homeScore) > Number(match.awayScore) ? 'var(--success)' : undefined }}
@@ -465,10 +498,19 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
           >
             {away.name}
           </span>
-          {away.shield
-            ? <img src={away.shield} alt="" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.4))' }} />
-            : <div className="team-avatar" style={{ background: awayColor + '22', color: awayColor, fontSize: '0.75rem' }}>{getInitials(away.name)}</div>
-          }
+          <button
+            type="button"
+            className="match-team-shield-btn"
+            onClick={e => lineupFromShield(e, away)}
+            title={`Convocatoria y alineación — ${away.name}`}
+            aria-label={`Convocatoria y alineación ${away.name}`}
+            style={shieldBtnStyle}
+          >
+            {away.shield
+              ? <img src={away.shield} alt="" style={{ width: 32, height: 32, objectFit: 'contain', pointerEvents: 'none', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.4))' }} />
+              : <div className="team-avatar" style={{ background: awayColor + '22', color: awayColor, fontSize: '0.75rem', pointerEvents: 'none' }}>{getInitials(away.name)}</div>
+            }
+          </button>
         </div>
       </div>
 
@@ -476,7 +518,7 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
         {match.status === 'finished' ? 'Final' : 'Pendiente'}
       </span>
 
-      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className="match-card-actions" onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {/* Planilla / poster */}
         <div style={{ display: 'flex', gap: 4 }}>
           <button
@@ -511,27 +553,16 @@ function MatchRow({ match, teams, onDelete, isAdmin, onView, onPlanilla, onLineu
             <button className="btn btn-danger btn-sm btn-icon" onClick={e => { e.stopPropagation(); onDelete(match.id); }} title="Eliminar">🗑</button>
           )}
         </div>
-
-        {/* Alinear — disponible para todos */}
-        {[home, away].map(team => (
-          <button
-            key={team.id}
-            onClick={e => { e.stopPropagation(); onLineup(match, team); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(132,204,22,0.3)',
-              background: 'rgba(132,204,22,0.08)', color: 'var(--primary-light)',
-              fontWeight: 700, fontSize: '0.65rem', cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-            title={`Alinear ${team.name}`}
-          >
-            {team.shield
-              ? <img src={team.shield} style={{ width: 14, height: 14, objectFit: 'contain' }} alt="" />
-              : <span style={{ fontSize: '0.6rem' }}>{getInitials(team.name)}</span>
-            }
-            ⬆
-          </button>
-        ))}
+        <p className="match-shield-hint" style={{ margin: 0, paddingTop: 6 }}>
+          <span style={{
+            fontSize: '0.65rem',
+            fontWeight: 600,
+            color: 'var(--text-muted)',
+            lineHeight: 1.35,
+          }}>
+            Escudos: convocatoria y alineación · Resto de la tarjeta: planilla del partido
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -626,7 +657,7 @@ export default function Fixtures() {
           </div>
         </div>
         {isAdmin && (
-          <div style={{ display: 'flex', gap: 10 }}>
+        <div className="fixtures-header-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary" onClick={() => setShowAddMatch(true)}>+ Partido manual</button>
             <button className="btn btn-primary btn-lg" onClick={generateFixture}>
               ⚡ {activeTournament.matches.length > 0 ? 'Regenerar fixture' : 'Generar fixture'}

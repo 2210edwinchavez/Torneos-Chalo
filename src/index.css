@@ -31,16 +31,29 @@
   --shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
 
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: #1a4a1a;
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.5;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -64,20 +77,32 @@ input, select, textarea {
 .app-layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-w);
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .page-content {
   flex: 1;
   padding: 28px 32px;
   margin-top: var(--header-h);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Sidebar */
@@ -648,6 +673,16 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 .bracket-container {
   overflow-x: auto;
   padding: 20px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Cajas dentro de grids que usan repeat + minmax: no forzar anchura mayor que pantalla ── */
+.teams-grid-responsive,
+.tournaments-grid-responsive {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .bracket-rounds {
@@ -786,6 +821,26 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 }
 
 .match-card:hover { border-color: var(--primary); }
+
+/* Escudo del partido: convocatoria / alineación */
+button.match-team-shield-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+button.match-team-shield-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.match-team-shield-btn:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  button.match-team-shield-btn:hover {
+    box-shadow: 0 0 0 2px rgba(132,204,22,0.35);
+  }
+}
 
 .match-teams {
   flex: 1;
@@ -1067,6 +1122,69 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 
   html, body { overflow-x: hidden; }
 
+  /* Partidos / tarjetas: apilar contenido sobre pantallas angostas */
+  .match-card {
+    flex-wrap: wrap;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .match-card-meta {
+    flex: 1 1 100%;
+    min-width: 0 !important;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    gap: 4px 12px;
+  }
+
+  .match-teams {
+    flex: 1 1 100%;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .match-card .match-teams > div {
+    justify-content: center !important;
+  }
+
+  .match-team-name {
+    text-align: center !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .match-score-box {
+    justify-content: center;
+  }
+
+  .match-card-actions {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    justify-content: center !important;
+    align-items: center;
+    gap: 6px !important;
+  }
+
+  .match-card-actions > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px !important;
+  }
+
+  .flex-between { flex-wrap: wrap; gap: 8px; }
+  .flex-row { flex-wrap: wrap; align-items: flex-start; }
+
+  /* Tarjetas y tablas dentro del ancho útil */
+  .card { max-width: 100%; min-width: 0; box-sizing: border-box; }
+
   /* Sidebar: hidden off-screen by default, slides in when open */
   .sidebar {
     left: -260px;
@@ -1074,6 +1192,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
     transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
     z-index: 300;
     box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
   }
   .sidebar.sidebar-open { left: 0; }
 
@@ -1087,7 +1206,10 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   .main-content { margin-left: 0; }
   .header {
     left: 0;
-    padding: 0 10px;
+    padding-top: max(0px, env(safe-area-inset-top, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    padding-bottom: 0;
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
     gap: 6px;
   }
   .header-actions { gap: 6px; }
@@ -1110,9 +1232,14 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   .header-user-text { display: none !important; }
   .header-user-arrow { display: none !important; }
 
-  .page-content { padding: 14px 12px; }
+  .page-content {
+    padding-top: 14px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
 
-  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .stat-card { padding: 14px; }
   .stat-value { font-size: 1.75rem; }
 
@@ -1126,6 +1253,23 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
     gap: 10px;
   }
   .page-title { font-size: 1.25rem; }
+
+  /* Botón principal del encabezado a ancho completo en pantallas estrechas */
+  .page-header > .btn.btn-lg,
+  .page-header .btn-primary.btn-lg {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fixtures-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .fixtures-header-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
 
   /* Tablas: scroll horizontal */
   .table-wrapper { -webkit-overflow-scrolling: touch; }
@@ -1148,16 +1292,58 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   .stat-label { font-size: 0.7rem; }
   .stat-icon { font-size: 1.2rem; }
 
-  .page-content { padding: 12px 10px; }
+  .page-content {
+    padding-top: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+  }
 
   .tabs { overflow-x: auto; flex-wrap: nowrap; }
   .tab { padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }
 
-  .modal-overlay { padding: 12px; }
+  .modal-overlay { padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
+  }
   .modal-header { padding: 16px 16px 0; }
   .modal-body { padding: 16px; }
-  .modal-footer { padding: 0 16px 16px; gap: 8px; }
+  .modal-footer {
+    padding: 0 16px max(16px, env(safe-area-inset-bottom, 0px));
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+  .modal-footer .btn { flex: 1 1 calc(50% - 6px); min-width: 0; justify-content: center; }
 
   .btn { font-size: 0.82rem; padding: 7px 12px; }
   .btn-lg { font-size: 0.875rem; padding: 9px 16px; }
+
+  /* Jugadores — filtros a columna */
+  .players-filters-row .search-bar {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .players-filters-row .players-filter-select {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .scorers-tournament-filter {
+    max-width: 100% !important;
+    width: 100%;
+  }
+
+  /* Estadísticas: una columna en móviles muy angostos */
+  .stat-grid { grid-template-columns: 1fr; }
+
+  td, th {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  th { letter-spacing: 0.05em; }
 }

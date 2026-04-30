@@ -583,12 +583,12 @@ export default function Players() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <div className="search-bar" style={{ flex: 1, minWidth: 200, maxWidth: 360 }}>
+      <div className="players-filters-row" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div className="search-bar" style={{ flex: 1, minWidth: 0, maxWidth: 360, width: '100%' }}>
           <span className="search-icon">🔍</span>
           <input className="form-input" placeholder="Buscar por nombre o documento…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="form-input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ minWidth: 160 }}>
+        <select className="form-input players-filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ minWidth: 0, flex: '0 1 auto' }}>
           <option value="all">Todos</option>
           <option value="free">Libres (sin equipo)</option>
           <option value="enrolled">Inscritos en equipo</option>

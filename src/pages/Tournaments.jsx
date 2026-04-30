@@ -436,7 +436,7 @@ export default function Tournaments() {
           {isAdmin && <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={openCreate}>+ Crear torneo</button>}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 16 }}>
+        <div className="tournaments-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 16 }}>
           {filtered.map((t, i) => (
             <TournamentCard
               key={t.id}

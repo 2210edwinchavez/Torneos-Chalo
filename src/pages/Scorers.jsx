@@ -395,7 +395,7 @@ export default function Scorers() {
       {/* Filtro por torneo */}
       <div style={{ marginBottom: 20 }}>
         <select
-          className="form-input"
+          className="form-input scorers-tournament-filter"
           style={{ maxWidth: 320 }}
           value={filterTournamentId}
           onChange={e => setFilterTournamentId(e.target.value)}

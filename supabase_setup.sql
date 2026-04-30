@@ -1,5 +1,5 @@
 -- ============================================================
--- TORNEOS JC SPORT - Script de configuración de base de datos
+-- CHALOSPORTS - Script de configuración de base de datos
 -- Ejecutar en: Supabase Dashboard → SQL Editor
 -- ============================================================
 

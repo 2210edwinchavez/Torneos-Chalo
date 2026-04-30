@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTournament } from '../context/TournamentContext';
 import { useCurrency, CURRENCIES } from '../context/CurrencyContext';
+import { APP_DISPLAY_NAME } from '../constants/branding';
 import Modal from './Modal';
 
 const PAGE_INFO = {
@@ -19,7 +20,7 @@ export default function Header({ currentPath, onMenuToggle }) {
   const { activeTournament } = useTournament();
   const { session, isAdmin, logout, changePassword } = useAuth();
   const { currency, setCurrency } = useCurrency();
-  const info = PAGE_INFO[currentPath] || { title: 'Torneos JC SPORT', subtitle: '' };
+  const info = PAGE_INFO[currentPath] || { title: APP_DISPLAY_NAME, subtitle: '' };
 
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
@@ -31,8 +32,8 @@ export default function Header({ currentPath, onMenuToggle }) {
   async function handleShare() {
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const shareData = {
-      title: 'Torneos JC SPORT',
-      text: '¡Únete a la plataforma de gestión de torneos JC SPORT! Consulta equipos, jugadores, partidos y tabla de posiciones.',
+      title: APP_DISPLAY_NAME,
+      text: `¡Únete a ${APP_DISPLAY_NAME}! Gestiona equipos, jugadores, partidos y tabla de posiciones.`,
       url: appUrl,
     };
     if (navigator.share) {

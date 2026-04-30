@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import { generateId } from '../utils/helpers';
 import { loadStateFromDB, saveStateToDB } from '../lib/supabase';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 
 const TournamentContext = createContext(null);
 
@@ -508,11 +509,11 @@ export function TournamentProvider({ children }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         height: '100vh', background: 'var(--bg)', flexDirection: 'column', gap: 16,
       }}>
-        <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain' }} />
         <div style={{ color: 'var(--primary-light)', fontWeight: 700, fontSize: '1.1rem' }}>
           Conectando con la base de datos…
         </div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Torneos JC SPORT</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{APP_DISPLAY_NAME}</div>
       </div>
     );
   }

@@ -13,6 +13,7 @@ import {
   formatDate,
   generateId,
 } from '../utils/helpers';
+import { APP_DISPLAY_NAME, appSiteHostname } from '../constants/branding';
 
 /* ─── Match Poster Modal ─── */
 function MatchPosterModal({ match, home, away, tournamentName, onClose }) {
@@ -88,7 +89,7 @@ function MatchPosterModal({ match, home, away, tournamentName, onClose }) {
     ctx.fillStyle = '#84cc16';
     ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('⚽ TORNEOS JC SPORT', W / 2, 42);
+    ctx.fillText(`⚽ ${APP_DISPLAY_NAME}`, W / 2, 42);
 
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.font = '11px system-ui';
@@ -198,7 +199,7 @@ function MatchPosterModal({ match, home, away, tournamentName, onClose }) {
 
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.font = '10px system-ui';
-    ctx.fillText('torneosjcsport.vercel.app', W / 2, infoY + 32);
+    ctx.fillText(appSiteHostname(), W / 2, infoY + 32);
 
     // Descargar
     const link = document.createElement('a');
@@ -245,7 +246,7 @@ function MatchPosterModal({ match, home, away, tournamentName, onClose }) {
           {/* Cabecera */}
           <div style={{ textAlign: 'center', marginBottom: 20, position: 'relative' }}>
             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#84cc16', letterSpacing: '0.14em', marginBottom: 2 }}>
-              ⚽ TORNEOS JC SPORT
+              ⚽ {APP_DISPLAY_NAME}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>
               {tournamentName}
@@ -746,7 +747,7 @@ export default function Fixtures() {
               if (roundMatches.length === 0) return null;
               return (
                 <div key={round}>
-                  <div style={{
+                  <div className="fixtures-round-label" style={{
                     fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)',
                     textTransform: 'uppercase', letterSpacing: '0.08em',
                     padding: '6px 0', marginBottom: 6,

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTournament } from '../context/TournamentContext';
+import { APP_DISPLAY_NAME, appSiteHostname } from '../constants/branding';
 import { getTeamColor, getInitials } from '../utils/helpers';
 
 /* ─── Formaciones ─── */
@@ -183,7 +184,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
     ctx.fillStyle = '#84cc16';
     ctx.font = 'bold 14px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('⚽ TORNEOS JC SPORT', W / 2, 30);
+    ctx.fillText(`⚽ ${APP_DISPLAY_NAME}`, W / 2, 30);
 
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = 'bold 18px system-ui';
@@ -382,7 +383,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.font = '10px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('torneosjcsport.vercel.app', W / 2, H - 12);
+    ctx.fillText(appSiteHostname(), W / 2, H - 12);
 
     const link = document.createElement('a');
     link.download = `alineacion-${team.name}-${match.round || '1'}.png`;
@@ -403,7 +404,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 960, margin: '0 auto',
+          width: '100%', maxWidth: 'min(1100px, 100%)', margin: '0 auto',
           height: '100%', display: 'flex', flexDirection: 'column',
           background: 'var(--bg)', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)',
         }}
@@ -460,21 +461,16 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div className="lineup-editor-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
           {/* Campo */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px 8px 8px', minWidth: 0 }}>
-            <div
-              ref={fieldRef}
-              style={{
-                flex: 1,
-                position: 'relative',
-                background: 'linear-gradient(180deg, #1a5c1a 0%, #1e6e1e 50%, #1a5c1a 100%)',
-                borderRadius: 10,
-                overflow: 'hidden',
-                minHeight: 320,
-              }}
-            >
+          <div className="lineup-editor-field-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, minHeight: 0, padding: '0 10px 8px' }}>
+            <div className="lineup-editor-field-wrap">
+              <div
+                ref={fieldRef}
+                className="lineup-editor-pitch"
+              >
+              <div className="lineup-editor-pitch-grass">
               {/* Franjas */}
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(0,0,0,0.07) 38px, rgba(0,0,0,0.07) 76px)' }} />
               {/* Líneas SVG */}
@@ -490,6 +486,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
                 <circle cx="50" cy="10" r="0.7" fill="white"/>
                 <circle cx="50" cy="90" r="0.7" fill="white"/>
               </svg>
+              </div>
 
               {/* Slots de posiciones */}
               {slots.map(slot => {
@@ -555,6 +552,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
                   </div>
                 );
               })}
+              </div>
             </div>
 
             {/* Suplentes */}
@@ -586,7 +584,7 @@ export default function LineupEditor({ match, tournament, team, onClose }) {
           </div>
 
           {/* Panel derecho: jugadores */}
-          <div style={{ width: 220, flexShrink: 0, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="lineup-editor-sidebar" style={{ width: 220, flexShrink: 0, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                 {activeSlot !== null

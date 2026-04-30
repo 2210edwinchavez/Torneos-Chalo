@@ -842,6 +842,91 @@ button.match-team-shield-btn:active {
   }
 }
 
+/* Lineup editor — cancha proporcional, centrada, aire inferior para arquero / etiquetas */
+.lineup-editor-field-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 10px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+.lineup-editor-pitch {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: center;
+  width: min(380px, 88vw);
+  max-width: 100%;
+  aspect-ratio: 68 / 105;
+  max-height: min(62dvh, 580px);
+  margin: 0 auto;
+  padding: 12px 8px 32px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  overflow: visible;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Césped recortado con bordes redondos; la cancha permite que sobresalgan jugadores/etiquetas */
+.lineup-editor-pitch-grass {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(180deg, #1a5c1a 0%, #1e6e1e 50%, #1a5c1a 100%);
+}
+
+/* Escritorio: altura según el espacio REAL del panel (no solo vh), centrada en el hueco */
+@media (min-width: 769px) {
+  .lineup-editor-field-wrap {
+    min-height: 320px;
+    padding: 16px 16px 20px;
+  }
+
+  .lineup-editor-pitch {
+    width: auto;
+    max-width: min(480px, calc(100% - 12px));
+    max-height: none;
+    /* cabe en el área flex del modal; evita recorte por overflow del padre */
+    height: min(600px, calc(100% - 8px));
+    aspect-ratio: 68 / 105;
+  }
+}
+
+@media (max-width: 768px) {
+  .lineup-editor-field-wrap {
+    min-height: 180px;
+    padding: 8px 6px 14px;
+  }
+
+  .lineup-editor-pitch {
+    width: min(326px, 92vw);
+    max-height: min(50dvh, 460px);
+    padding-bottom: 28px;
+  }
+
+  .lineup-editor-body {
+    flex-direction: column !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lineup-editor-sidebar {
+    width: 100% !important;
+    max-height: min(40dvh, 320px);
+    border-left: none !important;
+    border-top: 1px solid var(--border);
+  }
+}
+
 .match-teams {
   flex: 1;
   display: flex;
@@ -1122,61 +1207,122 @@ button.match-team-shield-btn:active {
 
   html, body { overflow-x: hidden; }
 
-  /* Partidos / tarjetas: apilar contenido sobre pantallas angostas */
+  /* Partidos: tarjetas más estrechas, centradas; duelo local vs visita compacto */
   .match-card {
     flex-wrap: wrap;
-    align-items: stretch;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
     min-width: 0;
+    max-width: min(416px, calc(100% - 28px));
+    margin-left: auto;
+    margin-right: auto;
+    padding: 14px 16px;
+    gap: 12px;
   }
 
   .match-card-meta {
-    flex: 1 1 100%;
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
     min-width: 0 !important;
     display: flex;
     flex-flow: row wrap;
     justify-content: center;
-    gap: 4px 12px;
+    align-items: center;
+    gap: 6px 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  /* Local | marcador | visita — hacia el centro */
   .match-teams {
-    flex: 1 1 100%;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 10px;
     width: 100%;
+    max-width: 372px;
+    margin: 0 auto;
+    flex: none !important;
   }
 
-  .match-card .match-teams > div {
-    justify-content: center !important;
+  .match-card .match-teams > div:first-child {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end !important;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .match-card .match-teams > div:last-child {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .match-card .match-teams > div:first-child .match-team-name {
+    text-align: right !important;
+  }
+
+  .match-card .match-teams > div:last-child .match-team-name {
+    text-align: left !important;
   }
 
   .match-team-name {
-    text-align: center !important;
     overflow-wrap: anywhere;
     word-break: break-word;
-    max-width: 100%;
   }
 
   .match-score-box {
+    justify-self: center;
     justify-content: center;
+    flex-shrink: 0;
+    padding: 0 4px;
+  }
+
+  .match-card > .badge {
+    align-self: center;
   }
 
   .match-card-actions {
-    flex: 1 1 100%;
+    flex: none !important;
     width: 100%;
-    min-width: 0;
-    flex-direction: row !important;
+    max-width: 360px;
+    margin: 0 auto;
+    flex-direction: column !important;
+    align-items: center;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  .match-card-actions > div:first-child {
+    display: flex;
     flex-wrap: wrap;
     justify-content: center !important;
-    align-items: center;
     gap: 6px !important;
   }
 
   .match-card-actions > div {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px !important;
+    justify-content: center !important;
+  }
+
+  .match-shield-hint {
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+    text-align: center;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  /* Títulos de ronda centrados junto al listado compacto */
+  .fixtures-round-label {
+    text-align: center;
+    letter-spacing: 0.06em !important;
   }
 
   .flex-between { flex-wrap: wrap; gap: 8px; }
@@ -1274,8 +1420,6 @@ button.match-team-shield-btn:active {
   /* Tablas: scroll horizontal */
   .table-wrapper { -webkit-overflow-scrolling: touch; }
 
-  /* Match cards más compactos */
-  .match-card { padding: 12px 14px; gap: 10px; }
   .match-team-name { font-size: 0.82rem; }
 }
 
@@ -1297,6 +1441,22 @@ button.match-team-shield-btn:active {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     padding-left: max(10px, env(safe-area-inset-left, 0px));
     padding-right: max(10px, env(safe-area-inset-right, 0px));
+  }
+
+  .match-card {
+    max-width: min(360px, calc(100% - 20px));
+    padding: 12px 12px 10px;
+    gap: 10px;
+  }
+
+  .match-teams {
+    max-width: 328px;
+    gap: 6px 8px;
+  }
+
+  .match-card-meta {
+    max-width: 300px;
+    padding-bottom: 6px;
   }
 
   .tabs { overflow-x: auto; flex-wrap: nowrap; }

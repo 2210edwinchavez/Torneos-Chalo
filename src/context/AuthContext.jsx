@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, supabaseConfigured } from '../lib/supabase';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 
 const AuthContext = createContext(null);
 const GUEST_KEY = 'torneosjcsport_guest';
@@ -144,7 +145,7 @@ export function AuthProvider({ children }) {
         height: '100vh', background: '#0a0f0a', flexDirection: 'column', gap: 16,
         padding: 24, textAlign: 'center',
       }}>
-        <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain' }} />
         <div style={{ color: '#ef4444', fontWeight: 800, fontSize: '1.1rem' }}>⚠️ Base de datos no configurada</div>
         <div style={{
           background: '#1a0f0f', border: '1px solid rgba(239,68,68,0.3)',
@@ -172,7 +173,7 @@ export function AuthProvider({ children }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         height: '100vh', background: '#0a0f0a', flexDirection: 'column', gap: 16,
       }}>
-        <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain' }} />
         <div style={{ color: '#84cc16', fontWeight: 700, fontSize: '1.1rem' }}>
           Cargando…
         </div>

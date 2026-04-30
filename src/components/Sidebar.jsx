@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import { getTeamColor } from '../utils/helpers';
 
 const SPORT_ICONS = {
@@ -30,8 +31,8 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className="sidebar-logo">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/logo jc sport.png" alt="Logo" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }} />
-            <h1 style={{ margin: 0 }}>Torneos JC SPORT</h1>
+            <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6 }} />
+            <h1 style={{ margin: 0 }}>{APP_DISPLAY_NAME}</h1>
           </div>
           <button
             className="sidebar-close-btn"
@@ -138,7 +139,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-          Torneos JC SPORT v1.0
+          {APP_DISPLAY_NAME} v1.0
         </div>
       </div>
     </aside>

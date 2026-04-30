@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import { formatDate, getTeamColor, getInitials, calcStandings } from '../utils/helpers';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -336,7 +337,7 @@ function UserDashboard({ tournaments, session }) {
   if (tournaments.length === 0) {
     return (
       <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',textAlign:'center',gap:16 }}>
-        <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width:90,height:90,objectFit:'contain',filter:'drop-shadow(0 4px 24px rgba(132,204,22,0.4))',marginBottom:8 }} />
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width:90,height:90,objectFit:'contain',filter:'drop-shadow(0 4px 24px rgba(132,204,22,0.4))',marginBottom:8 }} />
         <h3 style={{ color:'var(--text-primary)',fontSize:'1.2rem',fontWeight:800 }}>Bienvenido, {session?.name}</h3>
         <p style={{ color:'var(--text-muted)',fontSize:'0.9rem' }}>Aún no hay torneos disponibles.<br/>El administrador los publicará pronto.</p>
       </div>
@@ -551,15 +552,15 @@ export default function Dashboard() {
         {/* Contenido */}
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
           <img
-            src="/logo jc sport.png"
-            alt="Torneos JC SPORT"
+            src={APP_LOGO_URL}
+            alt={APP_DISPLAY_NAME}
             style={{
               width: 130, height: 130, objectFit: 'contain', marginBottom: 20,
               filter: 'drop-shadow(0 8px 32px rgba(132,204,22,0.5))',
             }}
           />
           <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 8 }}>
-            Bienvenido a Torneos JC SPORT
+            Bienvenido a {APP_DISPLAY_NAME}
           </h3>
           <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 24, fontSize: '0.95rem' }}>
             Aún no tienes torneos. Crea tu primer torneo para comenzar.

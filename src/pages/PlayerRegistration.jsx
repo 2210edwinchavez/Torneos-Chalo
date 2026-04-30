@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { loadStatePublic, submitPlayerRegistration } from '../lib/supabase';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import { getTeamColor, getInitials } from '../utils/helpers';
 
 const SPORT_ICONS = {
@@ -230,8 +231,8 @@ export default function PlayerRegistration() {
     }}>
       {/* Header de la app */}
       <div style={{ width: '100%', maxWidth: 480, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <img src="/logo jc sport.png" alt="JC SPORT" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
-        <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#84cc16' }}>Torneos JC SPORT</span>
+        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
+        <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#84cc16' }}>{APP_DISPLAY_NAME}</span>
       </div>
 
       <div style={{ width: '100%', maxWidth: 480 }}>
@@ -400,7 +401,7 @@ export default function PlayerRegistration() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.72rem', color: '#5a7353' }}>
-          <a href={appUrl} style={{ color: '#84cc16', fontWeight: 700, textDecoration: 'none' }}>Torneos JC SPORT</a> · Gestión deportiva
+          <a href={appUrl} style={{ color: '#84cc16', fontWeight: 700, textDecoration: 'none' }}>{APP_DISPLAY_NAME}</a> · Gestión deportiva
         </div>
       </div>
     </div>

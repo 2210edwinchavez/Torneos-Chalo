@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 
 export default function Login() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, loginAsGuest, resetPassword } = useAuth();
@@ -84,8 +85,8 @@ export default function Login() {
           }} />
 
           <img
-            src="/logo jc sport.png"
-            alt="Torneos JC SPORT"
+            src={APP_LOGO_URL}
+            alt={APP_DISPLAY_NAME}
             style={{
               width: 180, height: 180, objectFit: 'contain',
               position: 'relative', zIndex: 1,
@@ -96,7 +97,7 @@ export default function Login() {
             marginTop: 20, marginBottom: 6, fontSize: '1.25rem', fontWeight: 800,
             color: '#84cc16', letterSpacing: '0.05em', textAlign: 'center',
             position: 'relative', zIndex: 1,
-          }}>TORNEOS JC SPORT</h2>
+          }}>{APP_DISPLAY_NAME}</h2>
           <p style={{
             fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center',
             position: 'relative', zIndex: 1, letterSpacing: '0.08em',
@@ -114,8 +115,8 @@ export default function Login() {
 
           {/* Logo compacto — solo en móvil */}
           <div className="login-mobile-logo">
-            <img src="/logo jc sport.png" alt="Torneos JC SPORT" style={{ width: 72, height: 72, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(132,204,22,0.4))' }} />
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#84cc16', letterSpacing: '0.05em' }}>TORNEOS JC SPORT</div>
+            <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain', filter: 'drop-shadow(0 4px 16px rgba(132,204,22,0.4))' }} />
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#84cc16', letterSpacing: '0.05em' }}>{APP_DISPLAY_NAME}</div>
             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>PLATAFORMA DE GESTIÓN</div>
           </div>
 

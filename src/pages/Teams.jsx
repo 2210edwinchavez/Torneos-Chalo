@@ -7,8 +7,102 @@ import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { getTeamColor, getInitials, formatDate } from '../utils/helpers';
 import { loadPendingSubmissions, updateSubmissionStatus, supabaseConfigured } from '../lib/supabase';
+import {
+  PAYMENT_LLAVE,
+  PAYMENT_RECIPIENT_NAME,
+  paymentReceivingConfigured,
+  getPaymentOpenUrl,
+} from '../constants/payments';
 
 const EMPTY_TEAM_FORM = { name: '', shortName: '', coach: '', city: '', shield: null };
+
+/* ─── Nequi / llave Bre-B — envío a tu cuenta ─── */
+function NequiPaymentPanel({ amount, formatMoney, referenceLine, compact }) {
+  const [copied, setCopied] = useState('');
+  if (!paymentReceivingConfigured()) return null;
+
+  const openUrl = getPaymentOpenUrl();
+  const rounded = Math.round(Number(amount) || 0);
+
+  function copyField(text, key) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(''), 2000);
+    }).catch(() => {
+      alert('No se pudo copiar. Hazlo manualmente.');
+    });
+  }
+
+  const boxStyle = compact
+    ? {
+        padding: 12,
+        marginTop: 0,
+        background: 'rgba(218, 0, 128, 0.06)',
+        borderRadius: 10,
+        border: '1px solid rgba(218, 0, 128, 0.22)',
+      }
+    : {
+        padding: 14,
+        marginTop: 14,
+        background: 'rgba(218, 0, 128, 0.06)',
+        borderRadius: 10,
+        border: '1px solid rgba(218, 0, 128, 0.22)',
+      };
+
+  return (
+    <div style={boxStyle}>
+      <div style={{ fontWeight: 800, fontSize: compact ? '0.8rem' : '0.88rem', color: 'var(--text-primary)', marginBottom: 8 }}>
+        📱 Enviar pago a la cuenta del organizador
+      </div>
+      {PAYMENT_RECIPIENT_NAME && (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+          A nombre de: <strong>{PAYMENT_RECIPIENT_NAME}</strong>
+        </div>
+      )}
+      {PAYMENT_LLAVE ? (
+        <div style={{ fontSize: compact ? '0.78rem' : '0.85rem', marginBottom: 8, wordBreak: 'break-all' }}>
+          <span style={{ color: 'var(--text-muted)' }}>Llave (Nequi / Bre-B / celular): </span>
+          <strong style={{ color: 'var(--text-primary)' }}>{PAYMENT_LLAVE}</strong>
+        </div>
+      ) : (
+        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: 8 }}>
+          Usa el enlace de pago para completar el envío en Nequi u otra app.
+        </div>
+      )}
+      <div style={{ fontSize: compact ? '0.78rem' : '0.85rem', marginBottom: 10 }}>
+        Monto a enviar: <strong style={{ color: 'var(--text-primary)' }}>{formatMoney(amount)}</strong>
+        {copied === 'monto' && <span style={{ marginLeft: 8, color: 'var(--success)', fontSize: '0.72rem' }}>✓ copiado</span>}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+        {PAYMENT_LLAVE && (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyField(PAYMENT_LLAVE, 'llave')}>
+            Copiar llave {copied === 'llave' ? ' ✓' : ''}
+          </button>
+        )}
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyField(String(rounded), 'monto')}>
+          Copiar monto (COP) {copied === 'monto' ? ' ✓' : ''}
+        </button>
+        {referenceLine && (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyField(referenceLine, 'ref')}>
+            Copiar referencia {copied === 'ref' ? ' ✓' : ''}
+          </button>
+        )}
+      </div>
+      <a
+        href={openUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-primary w-full"
+        style={{ display: 'inline-flex', justifyContent: 'center', fontWeight: 800 }}
+      >
+        Abrir enlace para pagar (Nequi / banca)
+      </a>
+      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.45 }}>
+        El dinero llega a la cuenta asociada a esa llave. Cuando lo envíes, el administrador marcará el pago como recibido en esta app.
+      </p>
+    </div>
+  );
+}
 
 /* ─── Shield Upload ─── */
 function ShieldUpload({ value, onChange, required }) {
@@ -181,9 +275,14 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
                 {formatMoney(payment.totalAmount)}
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14 }}>Pago único de contado</div>
+              <NequiPaymentPanel
+                amount={payment.totalAmount}
+                formatMoney={formatMoney}
+                referenceLine={`${fullName} · inscripción`}
+              />
               {isAdmin && (
-                <button className="btn btn-success btn-lg w-full" onClick={payCash}>
-                  💵 Confirmar pago de contado
+                <button className="btn btn-success btn-lg w-full" style={{ marginTop: 12 }} onClick={payCash}>
+                  💵 Confirmar pago recibido (organizador)
                 </button>
               )}
             </div>
@@ -195,43 +294,65 @@ function PaymentModal({ enrollment, player, tournamentId, teamId, inscriptionFee
       {payment.type === 'installments3' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {payment.installments.map(inst => (
-            <div key={inst.number} style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 16px', borderRadius: 10,
-              background: inst.paid ? 'rgba(16,185,129,0.06)' : 'var(--bg-card2)',
-              border: `1px solid ${inst.paid ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
-              transition: 'all 0.15s',
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: inst.paid ? 'rgba(16,185,129,0.15)' : 'var(--bg-card)',
-                border: `2px solid ${inst.paid ? 'var(--success)' : 'var(--border)'}`,
-                fontSize: inst.paid ? '1rem' : '0.85rem', fontWeight: 800,
-                color: inst.paid ? 'var(--success)' : 'var(--text-muted)',
-              }}>
-                {inst.paid ? '✓' : inst.number}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
-                  Cuota {inst.number} de 3
+            <div
+              key={inst.number}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '14px 16px',
+                  borderRadius: 10,
+                  background: inst.paid ? 'rgba(16,185,129,0.06)' : 'var(--bg-card2)',
+                  border: `1px solid ${inst.paid ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: inst.paid ? 'rgba(16,185,129,0.15)' : 'var(--bg-card)',
+                  border: `2px solid ${inst.paid ? 'var(--success)' : 'var(--border)'}`,
+                  fontSize: inst.paid ? '1rem' : '0.85rem', fontWeight: 800,
+                  color: inst.paid ? 'var(--success)' : 'var(--text-muted)',
+                }}>
+                  {inst.paid ? '✓' : inst.number}
                 </div>
-                {inst.paid && inst.paidDate && (
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Pagado el {new Date(inst.paidDate).toLocaleDateString('es-ES')}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                    Cuota {inst.number} de 3
                   </div>
+                  {inst.paid && inst.paidDate && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Pagado el {new Date(inst.paidDate).toLocaleDateString('es-ES')}
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: inst.paid ? 'var(--success)' : 'var(--text-primary)' }}>
+                  {formatMoney(inst.amount)}
+                </div>
+                {!inst.paid && isAdmin && (
+                  <button
+                    className="btn btn-success btn-sm"
+                    onClick={() => payInstallment(inst.number)}
+                  >
+                    Confirmar recibido
+                  </button>
                 )}
               </div>
-              <div style={{ fontWeight: 800, fontSize: '1rem', color: inst.paid ? 'var(--success)' : 'var(--text-primary)' }}>
-                {formatMoney(inst.amount)}
-              </div>
-              {!inst.paid && isAdmin && (
-                <button
-                  className="btn btn-success btn-sm"
-                  onClick={() => payInstallment(inst.number)}
-                >
-                  Pagar
-                </button>
+              {!inst.paid && (
+                <NequiPaymentPanel
+                  compact
+                  amount={inst.amount}
+                  formatMoney={formatMoney}
+                  referenceLine={`${fullName} · cuota ${inst.number}`}
+                />
               )}
             </div>
           ))}

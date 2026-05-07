@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import { generateId } from '../utils/helpers';
 import { loadStateFromDB, saveStateToDB } from '../lib/supabase';
-import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
+import { APP_DISPLAY_NAME } from '../constants/branding';
 
 const TournamentContext = createContext(null);
 
@@ -153,6 +153,26 @@ function reducer(state, action) {
           state.activeTournamentId === action.payload
             ? (remaining[0]?.id || null)
             : state.activeTournamentId,
+      };
+    }
+
+    case 'DUPLICATE_TOURNAMENT': {
+      const sourceId = action.payload;
+      const src = state.tournaments.find(t => t.id === sourceId);
+      if (!src) return state;
+      const copy = {
+        ...src,
+        id: generateId(),
+        name: `${src.name} (copia)`,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        teams: [],
+        matches: [],
+      };
+      return {
+        ...state,
+        tournaments: [...state.tournaments, copy],
+        activeTournamentId: copy.id,
       };
     }
 
@@ -506,14 +526,22 @@ export function TournamentProvider({ children }) {
 
   if (dbLoading) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: 'var(--bg)', flexDirection: 'column', gap: 16,
-      }}>
-        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain' }} />
-        <div style={{ color: 'var(--primary-light)', fontWeight: 700, fontSize: '1.1rem' }}>
-          Conectando con la base de datos…
-        </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          background: 'var(--bg)',
+          flexDirection: 'column',
+          gap: 20,
+        }}
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <span className="app-loading-football" role="img" aria-label="Cargando">
+          ⚽
+        </span>
         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{APP_DISPLAY_NAME}</div>
       </div>
     );

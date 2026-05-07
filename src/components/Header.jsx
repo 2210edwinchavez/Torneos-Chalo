@@ -7,7 +7,7 @@ import Modal from './Modal';
 import TournamentShieldThumb from './TournamentShieldThumb';
 
 const PAGE_INFO = {
-  '/': { title: 'Inicio', subtitle: 'Resumen general de tus torneos' },
+  '/': { title: 'Inicio', subtitle: 'Tus torneos' },
   '/torneos': { title: 'Torneos', subtitle: 'Gestiona todos tus torneos' },
   '/jugadores': { title: 'Jugadores', subtitle: 'Registro universal de jugadores' },
   '/equipos': { title: 'Equipos', subtitle: 'Equipos del torneo activo' },

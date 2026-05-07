@@ -169,14 +169,23 @@ export function AuthProvider({ children }) {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0a0f0a', flexDirection: 'column', gap: 16,
-      }}>
-        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width: 72, height: 72, objectFit: 'contain' }} />
-        <div style={{ color: '#84cc16', fontWeight: 700, fontSize: '1.1rem' }}>
-          Cargando…
-        </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          background: 'var(--bg)',
+          flexDirection: 'column',
+          gap: 20,
+        }}
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <span className="app-loading-football" role="img" aria-label="Cargando sesión">
+          ⚽
+        </span>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{APP_DISPLAY_NAME}</div>
       </div>
     );
   }

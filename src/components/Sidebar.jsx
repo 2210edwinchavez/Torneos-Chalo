@@ -1,12 +1,15 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
+import { useAuth } from '../context/AuthContext';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import TournamentShieldThumb from './TournamentShieldThumb';
 import { getTeamColor } from '../utils/helpers';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { state, dispatch, activeTournament } = useTournament();
+  const { session, logout } = useAuth();
   const navigate = useNavigate();
+  const userInitial = session?.name?.trim()?.charAt(0)?.toUpperCase() || '?';
 
   function selectTournament(id) {
     dispatch({ type: 'SET_ACTIVE_TOURNAMENT', payload: id });
@@ -20,6 +23,18 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`}>
+      <div className="sidebar-user">
+        <div className="sidebar-user-row">
+          <div className="sidebar-user-avatar" aria-hidden>{userInitial}</div>
+          <div className="sidebar-user-meta">
+            <div className="sidebar-user-name">{session?.name || 'Usuario'}</div>
+          </div>
+        </div>
+        <button type="button" className="sidebar-logout" onClick={() => logout()}>
+          Cerrar sesión
+        </button>
+      </div>
+
       <div className="sidebar-logo">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -63,9 +78,9 @@ export default function Sidebar({ isOpen, onClose }) {
               style={{
                 padding: '8px 12px',
                 marginBottom: 8,
-                background: 'rgba(132,204,22,0.08)',
+                background: 'rgba(255,255,255,0.08)',
                 borderRadius: 8,
-                border: '1px solid rgba(132,204,22,0.2)',
+                border: '1px solid rgba(255,255,255,0.12)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -76,11 +91,11 @@ export default function Sidebar({ isOpen, onClose }) {
                   size={36}
                   imgStyle={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))' }}
                 />
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary-light)', flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff', flex: 1, minWidth: 0, lineHeight: 1.3 }}>
                   {activeTournament.name}
                 </div>
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>
                 {activeTournament.type === 'league' ? 'Liga' : 'Eliminatoria'} · {activeTournament.teams.length} equipos
               </div>
             </div>
@@ -120,7 +135,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 style={{
                   background:
                     t.id === activeTournament?.id
-                      ? 'rgba(132,204,22,0.06)'
+                      ? 'rgba(255,255,255,0.1)'
                       : undefined,
                 }}
               >
@@ -130,7 +145,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 />
                 <span style={{ flex: 1, textAlign: 'left' }}>{t.name}</span>
                 {t.id === activeTournament?.id && (
-                  <span style={{ fontSize: '0.65rem', color: 'var(--primary-light)' }}>●</span>
+                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.85)' }}>●</span>
                 )}
               </button>
             ))}
@@ -138,9 +153,12 @@ export default function Sidebar({ isOpen, onClose }) {
         )}
       </nav>
 
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-          {APP_DISPLAY_NAME} v1.0
+      <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 'auto' }}>
+        <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
+          ▼
+        </div>
+        <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.38)', textAlign: 'center', marginTop: 6 }}>
+          {APP_DISPLAY_NAME}
         </div>
       </div>
     </aside>

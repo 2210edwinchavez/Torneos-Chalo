@@ -1,24 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
-import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { formatDate, getTeamColor, getInitials, calcStandings } from '../utils/helpers';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from 'recharts';
-
-function StatCard({ label, value, icon, color, sub }) {
-  return (
-    <div className={`stat-card ${color}`}>
-      <div className="stat-icon">{icon}</div>
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
-    </div>
-  );
-}
 
 /* ─── Tournament Detail Modal (para usuarios) ─── */
 function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
@@ -323,99 +308,56 @@ function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
   );
 }
 
+function DupIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
 /* ─── User Dashboard ─── */
 function UserDashboard({ tournaments, session }) {
   const [selected, setSelected] = useState(null);
 
   if (tournaments.length === 0) {
     return (
-      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',textAlign:'center',gap:16 }}>
-        <img src={APP_LOGO_URL} alt={APP_DISPLAY_NAME} style={{ width:90,height:90,objectFit:'contain',filter:'drop-shadow(0 4px 24px rgba(132,204,22,0.4))',marginBottom:8 }} />
-        <h3 style={{ color:'var(--text-primary)',fontSize:'1.2rem',fontWeight:800 }}>Bienvenido, {session?.name}</h3>
-        <p style={{ color:'var(--text-muted)',fontSize:'0.9rem' }}>Aún no hay torneos disponibles.<br/>El administrador los publicará pronto.</p>
+      <div className="dashboard-simple">
+        <div className="dashboard-simple-empty">
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+            Hola, {session?.name || 'invitado'}
+          </h2>
+          <p className="dashboard-simple-empty-note">
+            Aún no hay torneos disponibles. El administrador los publicará pronto.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <div className="page-title">Bienvenido, {session?.name} 👋</div>
-          <div className="page-subtitle">{tournaments.length} torneo{tournaments.length!==1?'s':''} disponible{tournaments.length!==1?'s':''} · haz clic para ver detalles</div>
-        </div>
-      </div>
-
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,280px),1fr))', gap:16 }}>
-        {tournaments.map((t, i) => {
-          const played = t.matches.filter(m => m.status==='finished').length;
-          const tc = getTeamColor(i);
-          return (
-            <button
-              key={t.id}
-              onClick={() => setSelected(t)}
-              style={{
-                textAlign:'left', cursor:'pointer', border:'none', padding:0, background:'transparent',
-                borderRadius:16, transition:'transform 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
-            >
-              <div className="card" style={{ border:`1px solid ${tc}33`, borderTop:`3px solid ${tc}`, height:'100%' }}>
-                {/* Header */}
-                <div style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:14 }}>
-                  <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontWeight:800,fontSize:'1rem',color:'var(--text-primary)',marginBottom:6 }}>{t.name}</div>
-                    <div style={{ display:'flex',gap:5,flexWrap:'wrap' }}>
-                      <span className={`badge ${t.status==='active'?'badge-active':'badge-finished'}`}>
-                        {t.status==='active'?'● Activo':'■ Finalizado'}
-                      </span>
-                      <span className="badge" style={{ background:'var(--bg-card2)',color:'var(--text-secondary)' }}>{t.sport}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {t.description && (
-                  <p style={{ fontSize:'0.8rem',color:'var(--text-muted)',marginBottom:12,fontStyle:'italic',lineHeight:1.5 }}>
-                    {t.description.slice(0,100)}{t.description.length>100?'…':''}
-                  </p>
-                )}
-
-                {/* Stats */}
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:12 }}>
-                  {[
-                    {label:'Equipos',value:t.teams.length,icon:'👥'},
-                    {label:'Partidos',value:t.matches.length,icon:'📅'},
-                    {label:'Jugados',value:played,icon:'✅'},
-                  ].map(s => (
-                    <div key={s.label} style={{ background:'var(--bg-card2)',borderRadius:8,padding:'7px 4px',textAlign:'center' }}>
-                      <div style={{ fontSize:'1rem',fontWeight:800,color:'var(--text-primary)' }}>{s.value}</div>
-                      <div style={{ fontSize:'0.62rem',color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.05em' }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Info pills */}
-                <div style={{ display:'flex',flexWrap:'wrap',gap:5,marginBottom:12 }}>
-                  {(t.startDate||t.endDate) && (
-                    <span className="pill" style={{ fontSize:'0.7rem' }}>📅 {t.startDate?formatDate(t.startDate):'?'} → {t.endDate?formatDate(t.endDate):'?'}</span>
-                  )}
-                  {t.venue && <span className="pill" style={{ fontSize:'0.7rem' }}>📍 {t.venue}</span>}
-                </div>
-
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'auto',paddingTop:8,borderTop:'1px solid var(--border)' }}>
-                  <span style={{ fontSize:'0.75rem',color:'var(--text-muted)' }}>
-                    {t.type==='league'?'Liga':'Eliminación directa'}
-                  </span>
-                  <span style={{ fontSize:'0.75rem',fontWeight:700,color:tc }}>Ver detalles →</span>
-                </div>
+    <div className="dashboard-simple">
+      <div className="dashboard-simple-rows">
+        {tournaments.map((t, i) => (
+          <button
+            key={t.id}
+            type="button"
+            className="dashboard-simple-row"
+            style={{ width: '100%', borderRadius: 12 }}
+            onClick={() => setSelected(t)}
+          >
+            <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
+            <div className="dashboard-simple-row-titles">
+              <div className="dashboard-simple-row-title">{t.name}</div>
+              <div className="dashboard-simple-row-sub">
+                {t.sport} · {t.type === 'league' ? 'Liga' : 'Eliminación'}
               </div>
-            </button>
-          );
-        })}
+            </div>
+            <span className="dashboard-simple-meta">{t.teams.length} equipos</span>
+          </button>
+        ))}
       </div>
-
       {selected && (
         <TournamentDetailModal
           tournament={selected}
@@ -427,58 +369,10 @@ function UserDashboard({ tournaments, session }) {
   );
 }
 
-
 export default function Dashboard() {
   const { state, activeTournament, dispatch } = useTournament();
   const { isAdmin, session } = useAuth();
-
-  const globalStats = useMemo(() => {
-    const total = state.tournaments.length;
-    const active = state.tournaments.filter(t => t.status === 'active').length;
-    const totalTeams = state.tournaments.reduce((s, t) => s + t.teams.length, 0);
-    const totalMatches = state.tournaments.reduce((s, t) => s + t.matches.length, 0);
-    const played = state.tournaments.reduce(
-      (s, t) => s + t.matches.filter(m => m.status === 'finished').length, 0
-    );
-    return { total, active, totalTeams, totalMatches, played };
-  }, [state.tournaments]);
-
-  const recentMatches = useMemo(() => {
-    const all = [];
-    state.tournaments.forEach(t => {
-      t.matches.filter(m => m.status === 'finished').forEach(m => {
-        const home = t.teams.find(tm => tm.id === m.homeId);
-        const away = t.teams.find(tm => tm.id === m.awayId);
-        if (home && away) {
-          all.push({ ...m, home, away, tournament: t.name });
-        }
-      });
-    });
-    return all.slice(-5).reverse();
-  }, [state.tournaments]);
-
-  const upcomingMatches = useMemo(() => {
-    const all = [];
-    state.tournaments.forEach(t => {
-      t.matches.filter(m => m.status === 'scheduled').forEach(m => {
-        const home = t.teams.find(tm => tm.id === m.homeId);
-        const away = t.teams.find(tm => tm.id === m.awayId);
-        if (home && away) {
-          all.push({ ...m, home, away, tournament: t.name });
-        }
-      });
-    });
-    return all.slice(0, 5);
-  }, [state.tournaments]);
-
-  const chartData = useMemo(() => {
-    return state.tournaments.map(t => ({
-      name: t.name.length > 14 ? t.name.slice(0, 12) + '…' : t.name,
-      equipos: t.teams.length,
-      partidos: t.matches.length,
-      jugados: t.matches.filter(m => m.status === 'finished').length,
-    }));
-  }, [state.tournaments]);
+  const navigate = useNavigate();
 
   if (!isAdmin) {
     return <UserDashboard tournaments={state.tournaments} session={session} />;
@@ -486,242 +380,64 @@ export default function Dashboard() {
 
   if (state.tournaments.length === 0) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-      }}>
-        {/* Fondo cancha */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(180deg, #1a4a1a 0%, #1e5c1e 25%, #226622 50%, #1e5c1e 75%, #1a4a1a 100%)',
-        }} />
-
-        {/* Franjas de césped */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(0,0,0,0.08) 60px, rgba(0,0,0,0.08) 120px)',
-        }} />
-
-        {/* Líneas blancas de la cancha */}
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.18 }} viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
-          {/* Borde cancha */}
-          <rect x="60" y="40" width="880" height="520" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Línea central */}
-          <line x1="500" y1="40" x2="500" y2="560" stroke="white" strokeWidth="3"/>
-          {/* Círculo central */}
-          <circle cx="500" cy="300" r="80" fill="none" stroke="white" strokeWidth="3"/>
-          <circle cx="500" cy="300" r="4" fill="white"/>
-          {/* Área grande izquierda */}
-          <rect x="60" y="170" width="130" height="260" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Área pequeña izquierda */}
-          <rect x="60" y="230" width="55" height="140" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Área grande derecha */}
-          <rect x="810" y="170" width="130" height="260" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Área pequeña derecha */}
-          <rect x="885" y="230" width="55" height="140" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Semicírculo área izquierda */}
-          <path d="M 190 240 A 80 80 0 0 1 190 360" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Semicírculo área derecha */}
-          <path d="M 810 240 A 80 80 0 0 0 810 360" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Punto penal izquierdo */}
-          <circle cx="145" cy="300" r="4" fill="white"/>
-          {/* Punto penal derecho */}
-          <circle cx="855" cy="300" r="4" fill="white"/>
-          {/* Porterías */}
-          <rect x="40" y="258" width="20" height="84" fill="none" stroke="white" strokeWidth="3"/>
-          <rect x="940" y="258" width="20" height="84" fill="none" stroke="white" strokeWidth="3"/>
-          {/* Esquinas */}
-          <path d="M 60 40 Q 75 40 75 55" fill="none" stroke="white" strokeWidth="2"/>
-          <path d="M 940 40 Q 925 40 925 55" fill="none" stroke="white" strokeWidth="2"/>
-          <path d="M 60 560 Q 75 560 75 545" fill="none" stroke="white" strokeWidth="2"/>
-          <path d="M 940 560 Q 925 560 925 545" fill="none" stroke="white" strokeWidth="2"/>
-        </svg>
-
-        {/* Overlay oscuro para legibilidad */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(0,0,0,0.45)',
-        }} />
-
-        {/* Contenido */}
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          <img
-            src={APP_LOGO_URL}
-            alt={APP_DISPLAY_NAME}
-            style={{
-              width: 130, height: 130, objectFit: 'contain', marginBottom: 20,
-              filter: 'drop-shadow(0 8px 32px rgba(132,204,22,0.5))',
-            }}
-          />
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 8 }}>
-            Bienvenido a {APP_DISPLAY_NAME}
-          </h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 24, fontSize: '0.95rem' }}>
-            Aún no tienes torneos. Crea tu primer torneo para comenzar.
+      <div className="dashboard-simple">
+        <div className="dashboard-simple-empty">
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+            Bienvenido{session?.name ? `, ${session.name}` : ''}
+          </h2>
+          <p className="dashboard-simple-empty-note">
+            Crea tu primer torneo para empezar a organizar equipos y partidos.
           </p>
-          {isAdmin && (
-            <Link to="/torneos" className="btn btn-primary" style={{ fontSize: '1rem', padding: '12px 28px' }}>
-              + Crear primer torneo
-            </Link>
-          )}
         </div>
+        <Link to="/torneos" className="dashboard-simple-new">
+          + Nuevo torneo
+        </Link>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Stats */}
-      <div className="stat-grid">
-        <StatCard label="Torneos totales" value={globalStats.total} icon="🏆" color="indigo" sub={`${globalStats.active} activos`} />
-        <StatCard label="Equipos" value={globalStats.totalTeams} icon="👥" color="blue" sub="en todos los torneos" />
-        <StatCard label="Partidos" value={globalStats.totalMatches} icon="📅" color="green" sub={`${globalStats.played} jugados`} />
-        <StatCard label="Pendientes" value={globalStats.totalMatches - globalStats.played} icon="⏳" color="amber" sub="por jugar" />
-      </div>
-
-      <div className="grid-2 mb-24">
-        {/* Chart */}
-        <div className="card">
-          <div className="flex-between mb-16">
-            <div>
-              <div className="font-semibold">Torneos — Equipos y partidos</div>
-              <div className="text-xs text-muted" style={{ marginTop: 2 }}>Comparativa general</div>
-            </div>
-          </div>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData} barSize={14}>
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#111713', border: '1px solid #1e2d1a', borderRadius: 8, color: '#f1f5f9' }}
-                  cursor={{ fill: 'rgba(132,204,22,0.08)' }}
-                />
-                <Bar dataKey="equipos" name="Equipos" fill="#84cc16" radius={[4,4,0,0]} />
-                <Bar dataKey="jugados" name="Jugados" fill="#10b981" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="empty-state" style={{ padding: 30 }}>
-              <p>Sin datos aún</p>
-            </div>
-          )}
-        </div>
-
-        {/* Tournaments list */}
-        <div className="card">
-          <div className="flex-between mb-16">
-            <div className="font-semibold">Mis torneos</div>
-            <Link to="/torneos" className="btn btn-ghost btn-sm">Ver todos →</Link>
-          </div>
-          <div className="flex-col gap-8">
-            {state.tournaments.map((t, i) => (
-              <button
-                key={t.id}
-                onClick={() => dispatch({ type: 'SET_ACTIVE_TOURNAMENT', payload: t.id })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: `1px solid ${t.id === activeTournament?.id ? 'rgba(132,204,22,0.4)' : 'var(--border)'}`,
-                  background: t.id === activeTournament?.id ? 'rgba(132,204,22,0.08)' : 'var(--bg-card2)',
-                  cursor: 'pointer',
-                  width: '100%',
-                  textAlign: 'left',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={40} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t.name}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {t.teams.length} equipos · {t.matches.filter(m => m.status === 'finished').length}/{t.matches.length} partidos
-                  </div>
+    <div className="dashboard-simple">
+      <Link to="/torneos" className="dashboard-simple-new">
+        + Nuevo torneo
+      </Link>
+      <div className="dashboard-simple-rows">
+        {state.tournaments.map((t, i) => (
+          <div
+            key={t.id}
+            className={`dashboard-simple-row-wrap${t.id === activeTournament?.id ? ' is-active' : ''}`}
+          >
+            <button
+              type="button"
+              className="dashboard-simple-row"
+              onClick={() => {
+                dispatch({ type: 'SET_ACTIVE_TOURNAMENT', payload: t.id });
+                navigate('/torneos');
+              }}
+            >
+              <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
+              <div className="dashboard-simple-row-titles">
+                <div className="dashboard-simple-row-title">{t.name}</div>
+                <div className="dashboard-simple-row-sub">
+                  {t.sport} · {t.type === 'league' ? 'Liga' : 'Eliminación'}
                 </div>
-                <span className={`badge ${t.status === 'active' ? 'badge-active' : 'badge-finished'}`}>
-                  {t.status === 'active' ? 'Activo' : 'Finalizado'}
-                </span>
-              </button>
-            ))}
+              </div>
+              <span className="dashboard-simple-meta">{t.teams.length} equipos</span>
+            </button>
+            <button
+              type="button"
+              className="dashboard-simple-dup"
+              title="Duplicar plantilla (sin equipos ni partidos)"
+              aria-label="Duplicar torneo"
+              onClick={() => {
+                dispatch({ type: 'DUPLICATE_TOURNAMENT', payload: t.id });
+                navigate('/torneos');
+              }}
+            >
+              <DupIcon />
+            </button>
           </div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        {/* Recent results */}
-        <div className="card">
-          <div className="flex-between mb-16">
-            <div className="font-semibold">Últimos resultados</div>
-          </div>
-          {recentMatches.length === 0 ? (
-            <div className="empty-state" style={{ padding: 30 }}>
-              <div className="empty-state-icon">⚽</div>
-              <p>Sin resultados registrados aún</p>
-            </div>
-          ) : (
-            <div className="flex-col gap-8">
-              {recentMatches.map(m => (
-                <div key={m.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 12px', borderRadius: 8, background: 'var(--bg-card2)',
-                  border: '1px solid var(--border)'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {m.home.name} vs {m.away.name}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{m.tournament}</div>
-                  </div>
-                  <div style={{
-                    fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)',
-                    background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
-                    borderRadius: 6, padding: '3px 10px'
-                  }}>
-                    {m.homeScore} — {m.awayScore}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Upcoming */}
-        <div className="card">
-          <div className="flex-between mb-16">
-            <div className="font-semibold">Próximos partidos</div>
-          </div>
-          {upcomingMatches.length === 0 ? (
-            <div className="empty-state" style={{ padding: 30 }}>
-              <div className="empty-state-icon">📅</div>
-              <p>No hay partidos programados</p>
-            </div>
-          ) : (
-            <div className="flex-col gap-8">
-              {upcomingMatches.map(m => (
-                <div key={m.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 12px', borderRadius: 8, background: 'var(--bg-card2)',
-                  border: '1px solid var(--border)'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {m.home.name} vs {m.away.name}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      {m.tournament}{m.date ? ` · ${formatDate(m.date)}` : ''}
-                    </div>
-                  </div>
-                  <span className="badge badge-pending">Pendiente</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        ))}
       </div>
     </div>
   );

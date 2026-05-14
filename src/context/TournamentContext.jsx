@@ -524,29 +524,6 @@ export function TournamentProvider({ children }) {
     state.tournaments[0] ||
     null;
 
-  if (dbLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          background: 'var(--bg)',
-          flexDirection: 'column',
-          gap: 20,
-        }}
-        aria-busy="true"
-        aria-live="polite"
-      >
-        <span className="app-loading-football" role="img" aria-label="Cargando">
-          ⚽
-        </span>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{APP_DISPLAY_NAME}</div>
-      </div>
-    );
-  }
-
   return (
     <TournamentContext.Provider value={{ state, dispatch, activeTournament }}>
       {children}

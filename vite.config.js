@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 /** Misma ruta pública que `APP_LOGO_URL` en branding. */
 const LOGO_PATH = '/chalosport-logo.png'
@@ -13,6 +14,36 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['chalosport-logo.png', 'apple-touch-icon.png'],
+        manifest: {
+          name: 'ChalóSport — Torneos',
+          short_name: 'ChalóSport',
+          description: 'Gestiona torneos, equipos, jugadores y resultados desde un solo lugar.',
+          theme_color: '#84cc16',
+          background_color: '#0a0f0a',
+          display: 'standalone',
+          orientation: 'portrait',
+          scope: '/',
+          start_url: '/',
+          lang: 'es',
+          icons: [
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: { cacheName: 'google-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+            },
+          ],
+        },
+      }),
       {
         name: 'chalosports-og-meta',
         transformIndexHtml(html) {

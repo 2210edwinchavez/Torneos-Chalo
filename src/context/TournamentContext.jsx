@@ -402,6 +402,62 @@ function reducer(state, action) {
       };
     }
 
+    case 'APPROVE_TEAM_SUBMISSION': {
+      const { tournamentId, teamData, inscriptionFee } = action.payload;
+      const tournament = state.tournaments.find(t => t.id === tournamentId);
+      if (!tournament) return state;
+
+      const newTeam = {
+        id: generateId(),
+        name: teamData.name,
+        shortName: teamData.shortName || teamData.name.slice(0, 3).toUpperCase(),
+        coach: teamData.coach || '',
+        city: teamData.city || '',
+        shield: teamData.shield || null,
+        colorIndex: tournament.teams.length,
+        enrollments: [],
+        registrationToken: null,
+        registrationActive: false,
+      };
+
+      const newPlayers = [];
+      const newEnrollments = [];
+
+      for (const p of (teamData.players || [])) {
+        const existing = p.docNumber
+          ? state.globalPlayers.find(gp => gp.docNumber && gp.docNumber === p.docNumber)
+          : null;
+        const playerId = existing ? existing.id : generateId();
+        if (!existing) {
+          newPlayers.push({
+            id: playerId,
+            firstName: p.firstName || '',
+            lastName: p.lastName || '',
+            docNumber: p.docNumber || '',
+            birthDate: p.birthDate || '',
+            photo: p.photo || null,
+            createdAt: new Date().toISOString(),
+          });
+        }
+        newEnrollments.push({
+          id: generateId(),
+          playerId,
+          shirtNumber: p.shirtNumber || '',
+          payment: buildPayment('cash', Number(inscriptionFee) || 0),
+        });
+      }
+
+      newTeam.enrollments = newEnrollments;
+
+      return {
+        ...state,
+        globalPlayers: [...state.globalPlayers, ...newPlayers],
+        tournaments: state.tournaments.map(t =>
+          t.id !== tournamentId ? t : { ...t, teams: [...t.teams, newTeam] }
+        ),
+      };
+    }
+
     case '_LOAD_STATE':
       return { ...INITIAL_STATE, ...action.payload };
 

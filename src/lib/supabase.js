@@ -107,10 +107,45 @@ export async function loadPendingSubmissions(token) {
   return data || [];
 }
 
-/** Cambia el estado de una solicitud (approved / rejected) */
+/** Cambia el estado de una solicitud de jugador (approved / rejected) */
 export async function updateSubmissionStatus(id, status) {
   const { error } = await supabase
     .from('player_submissions')
+    .update({ status })
+    .eq('id', id);
+  return { error: error?.message || null };
+}
+
+/* ── Inscripción de equipos completos ── */
+
+/** Envía solicitud de inscripción de equipo completo */
+export async function submitTeamRegistration({ token, tournamentId, teamData }) {
+  const { error } = await supabase
+    .from('team_submissions')
+    .insert({
+      token,
+      tournament_id: tournamentId,
+      team_data: teamData,
+      status: 'pending',
+    });
+  return { error: error?.message || null };
+}
+
+/** Carga solicitudes de equipo para un token de torneo */
+export async function loadTeamSubmissions(token) {
+  const { data, error } = await supabase
+    .from('team_submissions')
+    .select('*')
+    .eq('token', token)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+/** Cambia el estado de una solicitud de equipo */
+export async function updateTeamSubmissionStatus(id, status) {
+  const { error } = await supabase
+    .from('team_submissions')
     .update({ status })
     .eq('id', id);
   return { error: error?.message || null };

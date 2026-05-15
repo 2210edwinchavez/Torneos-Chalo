@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { formatDate, compressImage } from '../utils/helpers';
+import { formatDate, compressImage, getInitials, getTeamColor } from '../utils/helpers';
+import { loadTeamSubmissions, updateTeamSubmissionStatus, supabaseConfigured } from '../lib/supabase';
 
 const SPORTS = ['Fútbol', 'Baloncesto', 'Tenis', 'Voleibol', 'Béisbol', 'Otro'];
 const SPORT_ICONS = {
@@ -164,6 +165,7 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
   const { formatMoney } = useCurrency();
   const { isAdmin } = useAuth();
   const [showInfo, setShowInfo] = useState(false);
+  const [showTeamRegLink, setShowTeamRegLink] = useState(false);
 
   const played = t.matches.filter(m => m.status === 'finished').length;
 
@@ -307,8 +309,33 @@ function TournamentCard({ t, i, isActive, dispatch, onEdit, onDelete, onToggleSt
         </div>
       )}
 
+      {/* Enlace de inscripción de equipos */}
+      {isAdmin && (
+        <button
+          className="btn btn-secondary w-full"
+          style={{ justifyContent: 'space-between', padding: '8px 12px', marginBottom: 10, position: 'relative' }}
+          onClick={() => setShowTeamRegLink(true)}
+        >
+          <span>🔗 Enlace inscripción de equipos</span>
+          {t.teamRegistrationActive && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
+              Activo
+            </span>
+          )}
+        </button>
+      )}
+
       {/* Actions */}
       <TournamentActions t={t} isActive={isActive} dispatch={dispatch} onEdit={onEdit} onDelete={onDelete} onToggleStatus={onToggleStatus} />
+
+      {showTeamRegLink && (
+        <TeamRegistrationLinkModal
+          tournament={t}
+          dispatch={dispatch}
+          onClose={() => setShowTeamRegLink(false)}
+        />
+      )}
     </div>
   );
 }
@@ -508,6 +535,236 @@ function TournamentModal({ editId, form, setForm, onClose, onSubmit }) {
           </>
         )}
       </form>
+    </Modal>
+  );
+}
+
+/* ─── Modal de enlace de inscripción de equipos ─── */
+function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
+  const [copyOk, setCopyOk] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+
+  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+  const link = tournament.teamRegistrationToken
+    ? `${appUrl}/unirse/${tournament.teamRegistrationToken}`
+    : null;
+
+  function generateToken() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function handleActivate() {
+    const token = tournament.teamRegistrationToken || generateToken();
+    dispatch({
+      type: 'UPDATE_TOURNAMENT',
+      payload: { id: tournament.id, data: { teamRegistrationToken: token, teamRegistrationActive: true } },
+    });
+  }
+
+  function handleDeactivate() {
+    dispatch({
+      type: 'UPDATE_TOURNAMENT',
+      payload: { id: tournament.id, data: { teamRegistrationActive: false } },
+    });
+  }
+
+  function handleNewToken() {
+    if (!confirm('¿Generar un enlace nuevo? El anterior dejará de funcionar.')) return;
+    dispatch({
+      type: 'UPDATE_TOURNAMENT',
+      payload: { id: tournament.id, data: { teamRegistrationToken: generateToken(), teamRegistrationActive: true } },
+    });
+  }
+
+  async function handleCopy() {
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopyOk(true);
+    setTimeout(() => setCopyOk(false), 2000);
+  }
+
+  const loadSubs = useCallback(async () => {
+    if (!tournament.teamRegistrationToken || !supabaseConfigured) return;
+    setLoading(true);
+    const data = await loadTeamSubmissions(tournament.teamRegistrationToken);
+    setSubmissions(data);
+    setLoading(false);
+  }, [tournament.teamRegistrationToken]);
+
+  useEffect(() => { loadSubs(); }, [loadSubs]);
+
+  const pending = submissions.filter(s => s.status === 'pending');
+  const approved = submissions.filter(s => s.status === 'approved');
+  const rejected = submissions.filter(s => s.status === 'rejected');
+
+  async function handleApprove(sub) {
+    setProcessingId(sub.id);
+    dispatch({
+      type: 'APPROVE_TEAM_SUBMISSION',
+      payload: {
+        tournamentId: tournament.id,
+        teamData: sub.team_data,
+        inscriptionFee: tournament.inscriptionFee || 0,
+      },
+    });
+    await updateTeamSubmissionStatus(sub.id, 'approved');
+    setSubmissions(prev => prev.filter(s => s.id !== sub.id));
+    setProcessingId(null);
+  }
+
+  async function handleReject(sub) {
+    setProcessingId(sub.id);
+    await updateTeamSubmissionStatus(sub.id, 'rejected');
+    setSubmissions(prev => prev.filter(s => s.id !== sub.id));
+    setProcessingId(null);
+  }
+
+  return (
+    <Modal
+      title={`Inscripción de equipos — ${tournament.name}`}
+      onClose={onClose}
+      footer={<button className="btn btn-secondary" onClick={onClose}>Cerrar</button>}
+    >
+      {/* Estado del enlace */}
+      <div style={{
+        padding: '14px 16px', borderRadius: 12, marginBottom: 18,
+        background: tournament.teamRegistrationActive ? 'rgba(16,185,129,0.07)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${tournament.teamRegistrationActive ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}>
+        <div style={{
+          width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+          background: tournament.teamRegistrationActive ? 'var(--success)' : 'var(--text-muted)',
+          boxShadow: tournament.teamRegistrationActive ? '0 0 8px var(--success)' : 'none',
+        }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+            {tournament.teamRegistrationActive ? 'Enlace activo' : tournament.teamRegistrationToken ? 'Enlace desactivado' : 'Sin enlace generado'}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+            {tournament.teamRegistrationActive
+              ? 'Cualquier persona con el enlace puede inscribir su equipo.'
+              : 'Activa el enlace para recibir inscripciones de equipos.'}
+          </div>
+        </div>
+        {tournament.teamRegistrationActive
+          ? <button className="btn btn-danger btn-sm" onClick={handleDeactivate}>Desactivar</button>
+          : <button className="btn btn-success btn-sm" onClick={handleActivate}>Activar</button>
+        }
+      </div>
+
+      {/* Enlace */}
+      {link && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.06em' }}>
+            Enlace para compartir
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{
+              flex: 1, padding: '9px 12px', borderRadius: 8,
+              background: 'var(--bg-card2)', border: '1px solid var(--border)',
+              fontSize: '0.75rem', color: 'var(--text-secondary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              userSelect: 'all', fontFamily: 'monospace',
+            }}>
+              {link}
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={handleCopy} style={{ flexShrink: 0 }}>
+              {copyOk ? '✓ Copiado' : '📋 Copiar'}
+            </button>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-muted)' }} onClick={handleNewToken}>
+            🔄 Generar enlace nuevo
+          </button>
+          {link.includes('localhost') && (
+            <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: '0.75rem', color: 'var(--warning)' }}>
+              ⚠️ El enlace usa "localhost" — solo funciona en este equipo. En producción usa la URL de Vercel.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Solicitudes pendientes */}
+      {supabaseConfigured && tournament.teamRegistrationToken && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Equipos pendientes de aprobación
+              {pending.length > 0 && (
+                <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 99, background: 'rgba(245,158,11,0.2)', color: 'var(--warning)', fontSize: '0.7rem', fontWeight: 800 }}>
+                  {pending.length}
+                </span>
+              )}
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.72rem' }} onClick={loadSubs} disabled={loading}>
+              {loading ? '⏳' : '🔄'}
+            </button>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Cargando…</div>
+          ) : pending.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>No hay solicitudes pendientes</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {pending.map(sub => {
+                const td = sub.team_data;
+                return (
+                  <div key={sub.id} style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--bg-card2)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    {/* Team header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                      {td.shield
+                        ? <img src={td.shield} style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }} alt="" />
+                        : <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🛡️</div>
+                      }
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{td.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {td.coach && <span>👔 {td.coach}</span>}
+                          {td.city && <span>📍 {td.city}</span>}
+                          {(td.players || []).length > 0 && <span>👥 {td.players.length} jugadores</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Players preview */}
+                    {(td.players || []).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                        {td.players.slice(0, 10).map((p, i) => (
+                          <span key={i} style={{ fontSize: '0.68rem', background: 'var(--bg-card)', borderRadius: 99, padding: '2px 8px', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                            {p.shirtNumber ? `#${p.shirtNumber} ` : ''}{p.firstName} {p.lastName}
+                          </span>
+                        ))}
+                        {td.players.length > 10 && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>+{td.players.length - 10} más</span>}
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                      {new Date(sub.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-success btn-sm" style={{ flex: 1 }} disabled={processingId === sub.id} onClick={() => handleApprove(sub)}>
+                        ✓ Aprobar e inscribir equipo
+                      </button>
+                      <button className="btn btn-danger btn-sm" disabled={processingId === sub.id} onClick={() => handleReject(sub)}>✕</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {(approved.length > 0 || rejected.length > 0) && (
+            <div style={{ marginTop: 10, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 12 }}>
+              {approved.length > 0 && <span>✓ {approved.length} aprobado{approved.length !== 1 ? 's' : ''}</span>}
+              {rejected.length > 0 && <span>✕ {rejected.length} rechazado{rejected.length !== 1 ? 's' : ''}</span>}
+            </div>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import { generateId } from '../utils/helpers';
-import { loadStateFromDB, saveStateToDB } from '../lib/supabase';
+import { loadStateFromDB, saveStateToDB, supabaseConfigured } from '../lib/supabase';
 import { APP_DISPLAY_NAME } from '../constants/branding';
 
 const TournamentContext = createContext(null);
@@ -475,13 +475,15 @@ export function TournamentProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Persist: localStorage siempre; Supabase con debounce + volcado al cerrar/cambiar de pestaña */
+  /* Persist: localStorage solo si Supabase NO está configurado; siempre en Supabase con debounce */
   useEffect(() => {
     if (!dbReady) return;
-    try {
-      localStorage.setItem('torneosjcsport_v2', JSON.stringify(state));
-    } catch (e) {
-      console.error('No se pudo guardar en localStorage (cupo lleno o privado):', e);
+    if (!supabaseConfigured) {
+      try {
+        localStorage.setItem('torneosjcsport_v2', JSON.stringify(state));
+      } catch (e) {
+        console.error('No se pudo guardar en localStorage (cupo lleno o privado):', e);
+      }
     }
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);

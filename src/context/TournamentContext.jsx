@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import { generateId } from '../utils/helpers';
-import { loadStateFromDB, saveStateToDB, supabaseConfigured } from '../lib/supabase';
+import { loadStateFromDB, saveStateToDB, supabaseConfigured, supabase } from '../lib/supabase';
 import { APP_DISPLAY_NAME } from '../constants/branding';
 
 const TournamentContext = createContext(null);
@@ -405,6 +405,16 @@ function reducer(state, action) {
     case '_LOAD_STATE':
       return { ...INITIAL_STATE, ...action.payload };
 
+    // Actualización en tiempo real desde otro dispositivo — preserva activeTournamentId local
+    case '_REALTIME_UPDATE':
+      return {
+        ...state,
+        globalPlayers: Array.isArray(action.payload.globalPlayers) ? action.payload.globalPlayers : state.globalPlayers,
+        tournaments: Array.isArray(action.payload.tournaments) ? action.payload.tournaments : state.tournaments,
+        playerStats: action.payload.playerStats || state.playerStats,
+        lineups: action.payload.lineups || state.lineups,
+      };
+
     default:
       return state;
   }
@@ -449,6 +459,7 @@ export function TournamentProvider({ children }) {
   const [dbReady, setDbReady] = useState(false);
   const stateRef = useRef(state);
   const saveTimerRef = useRef(null);
+  const lastSaveTimeRef = useRef(0); // para evitar loop: ignorar nuestro propio evento realtime
 
   useEffect(() => {
     stateRef.current = state;
@@ -475,6 +486,31 @@ export function TournamentProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* Realtime — escucha cambios de otros dispositivos/sesiones en la tabla app_state */
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+
+    const channel = supabase
+      .channel('app_state_realtime')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_state', filter: 'id=eq.main' },
+        (payload) => {
+          // Si el cambio viene de este mismo dispositivo (guardado hace < 3s), ignorarlo
+          if (Date.now() - lastSaveTimeRef.current < 3000) return;
+          const newData = payload.new?.data;
+          if (newData) {
+            dispatch({ type: '_REALTIME_UPDATE', payload: newData });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   /* Persist: localStorage solo si Supabase NO está configurado; siempre en Supabase con debounce */
   useEffect(() => {
     if (!dbReady) return;
@@ -489,7 +525,8 @@ export function TournamentProvider({ children }) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
-      saveStateToDB(state);
+      lastSaveTimeRef.current = Date.now();
+      saveStateToDB(stateRef.current);
     }, 500);
 
     return () => {

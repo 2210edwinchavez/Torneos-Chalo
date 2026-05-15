@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { formatDate } from '../utils/helpers';
+import { formatDate, compressImage } from '../utils/helpers';
 
 const SPORTS = ['Fútbol', 'Baloncesto', 'Tenis', 'Voleibol', 'Béisbol', 'Otro'];
 const SPORT_ICONS = {
@@ -35,7 +35,7 @@ function TournamentShieldPicker({ value, onChange }) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = e => onChange(e.target.result);
+    reader.onload = async e => onChange(await compressImage(e.target.result, 300, 0.75));
     reader.readAsDataURL(file);
   }
 

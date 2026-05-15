@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useTournament, findAllEnrollments, getPaymentStatus } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
-import { getInitials, getTeamColor, formatDate } from '../utils/helpers';
+import { getInitials, getTeamColor, formatDate, compressImage } from '../utils/helpers';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip,
 } from 'recharts';
@@ -18,7 +18,7 @@ function PhotoUpload({ value, onChange }) {
     if (!file.type.startsWith('image/')) { alert('Solo imágenes (JPG, PNG, WEBP).'); return; }
     if (file.size > 3 * 1024 * 1024) { alert('Máximo 3 MB.'); return; }
     const reader = new FileReader();
-    reader.onload = e => onChange(e.target.result);
+    reader.onload = async e => onChange(await compressImage(e.target.result, 200, 0.7));
     reader.readAsDataURL(file);
   }
   return (

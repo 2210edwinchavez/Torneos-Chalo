@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { getTeamColor, getInitials, formatDate } from '../utils/helpers';
+import { getTeamColor, getInitials, formatDate, compressImage } from '../utils/helpers';
 import { loadPendingSubmissions, updateSubmissionStatus, supabaseConfigured } from '../lib/supabase';
 import {
   PAYMENT_LLAVE,
@@ -113,7 +113,7 @@ function ShieldUpload({ value, onChange, required }) {
     if (!file.type.startsWith('image/')) { alert('Solo se permiten imágenes (JPG, PNG, WEBP, SVG).'); return; }
     if (file.size > 4 * 1024 * 1024) { alert('El escudo no puede superar 4 MB.'); return; }
     const reader = new FileReader();
-    reader.onload = e => onChange(e.target.result);
+    reader.onload = async e => onChange(await compressImage(e.target.result, 300, 0.75));
     reader.readAsDataURL(file);
   }
 
@@ -370,7 +370,7 @@ function PhotoUploadInline({ value, onChange }) {
     if (!file.type.startsWith('image/')) { alert('Solo imágenes.'); return; }
     if (file.size > 3 * 1024 * 1024) { alert('Máximo 3 MB.'); return; }
     const reader = new FileReader();
-    reader.onload = e => onChange(e.target.result);
+    reader.onload = async e => onChange(await compressImage(e.target.result, 200, 0.7));
     reader.readAsDataURL(file);
   }
   return (

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { loadStatePublic, submitPlayerRegistration } from '../lib/supabase';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { getTeamColor, getInitials } from '../utils/helpers';
+import { getTeamColor, getInitials, compressImage } from '../utils/helpers';
 
 const EMPTY_FORM = {
   firstName: '', lastName: '', docNumber: '',
@@ -18,7 +18,7 @@ function PhotoUpload({ value, onChange }) {
     if (!file.type.startsWith('image/')) { alert('Solo imágenes (JPG, PNG, WEBP).'); return; }
     if (file.size > 3 * 1024 * 1024) { alert('Máximo 3 MB.'); return; }
     const reader = new FileReader();
-    reader.onload = e => onChange(e.target.result);
+    reader.onload = async e => onChange(await compressImage(e.target.result, 200, 0.7));
     reader.readAsDataURL(file);
   }
   return (

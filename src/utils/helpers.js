@@ -1,3 +1,31 @@
+/**
+ * Comprime una imagen (dataURL base64) a un tamaño y calidad menores.
+ * maxSize: lado máximo en px. quality: 0-1.
+ * Retorna una Promise con el dataURL comprimido.
+ */
+export function compressImage(dataUrl, maxSize = 300, quality = 0.7) {
+  return new Promise((resolve) => {
+    if (!dataUrl || !dataUrl.startsWith('data:image')) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 export const COLORS = [
   '#84cc16','#22c55e','#f59e0b','#ef4444','#06b6d4',
   '#a3e635','#16a34a','#eab308','#f97316','#10b981',

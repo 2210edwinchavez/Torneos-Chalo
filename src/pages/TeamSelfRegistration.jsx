@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { loadStatePublic, submitTeamRegistration } from '../lib/supabase';
+import { loadTournamentByToken, submitTeamRegistration } from '../lib/supabase';
 import { APP_DISPLAY_NAME, APP_LOGO_URL } from '../constants/branding';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { getInitials, compressImage } from '../utils/helpers';
@@ -119,12 +119,7 @@ export default function TeamSelfRegistration() {
   const [players, setPlayers] = useState([{ ...EMPTY_PLAYER }]);
 
   useEffect(() => {
-    loadStatePublic().then(data => {
-      if (!data) { setStatus('invalid'); return; }
-      // Buscar el torneo por token
-      const t = (data.tournaments || []).find(
-        t => t.teamRegistrationToken === token && t.teamRegistrationActive
-      );
+    loadTournamentByToken(token).then(t => {
       if (!t) { setStatus('invalid'); return; }
       setTournament(t);
       setStatus('ready');

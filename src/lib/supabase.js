@@ -116,6 +116,40 @@ export async function updateSubmissionStatus(id, status) {
   return { error: error?.message || null };
 }
 
+/* ── Tabla liviana de tokens de torneo (para evitar leer el JSON gigante) ── */
+
+/** Guarda o actualiza la info pública del torneo en una tabla ligera */
+export async function saveTournamentToken({ token, tournamentId, name, sport, type, playerLimit }) {
+  const { error } = await supabase
+    .from('tournament_tokens')
+    .upsert({ token, tournament_id: tournamentId, name, sport, type, player_limit: playerLimit || 30, active: true });
+  return { error: error?.message || null };
+}
+
+/** Lee la info de un torneo por token (sin imágenes, solo texto) */
+export async function loadTournamentByToken(token) {
+  const { data, error } = await supabase
+    .from('tournament_tokens')
+    .select('*')
+    .eq('token', token)
+    .eq('active', true)
+    .single();
+  if (error || !data) return null;
+  return {
+    id: data.tournament_id,
+    name: data.name,
+    sport: data.sport,
+    type: data.type,
+    playerLimit: data.player_limit || 30,
+    shield: null,
+  };
+}
+
+/** Desactiva un token de torneo */
+export async function deactivateTournamentToken(token) {
+  await supabase.from('tournament_tokens').update({ active: false }).eq('token', token);
+}
+
 /* ── Inscripción de equipos completos ── */
 
 /** Envía solicitud de inscripción de equipo completo */

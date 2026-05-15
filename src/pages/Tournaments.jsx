@@ -5,7 +5,7 @@ import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { formatDate, compressImage, getInitials, getTeamColor } from '../utils/helpers';
-import { loadTeamSubmissions, updateTeamSubmissionStatus, supabaseConfigured } from '../lib/supabase';
+import { loadTeamSubmissions, updateTeamSubmissionStatus, supabaseConfigured, saveTournamentToken, deactivateTournamentToken } from '../lib/supabase';
 
 const SPORTS = ['Fútbol', 'Baloncesto', 'Tenis', 'Voleibol', 'Béisbol', 'Otro'];
 const SPORT_ICONS = {
@@ -555,26 +555,49 @@ function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  function handleActivate() {
+  async function handleActivate() {
     const token = tournament.teamRegistrationToken || generateToken();
     dispatch({
       type: 'UPDATE_TOURNAMENT',
       payload: { id: tournament.id, data: { teamRegistrationToken: token, teamRegistrationActive: true } },
     });
+    await saveTournamentToken({
+      token,
+      tournamentId: tournament.id,
+      name: tournament.name,
+      sport: tournament.sport,
+      type: tournament.type,
+      playerLimit: tournament.playerLimit || 30,
+    });
   }
 
-  function handleDeactivate() {
+  async function handleDeactivate() {
     dispatch({
       type: 'UPDATE_TOURNAMENT',
       payload: { id: tournament.id, data: { teamRegistrationActive: false } },
     });
+    if (tournament.teamRegistrationToken) {
+      await deactivateTournamentToken(tournament.teamRegistrationToken);
+    }
   }
 
-  function handleNewToken() {
+  async function handleNewToken() {
     if (!confirm('¿Generar un enlace nuevo? El anterior dejará de funcionar.')) return;
+    const newToken = generateToken();
+    if (tournament.teamRegistrationToken) {
+      await deactivateTournamentToken(tournament.teamRegistrationToken);
+    }
     dispatch({
       type: 'UPDATE_TOURNAMENT',
-      payload: { id: tournament.id, data: { teamRegistrationToken: generateToken(), teamRegistrationActive: true } },
+      payload: { id: tournament.id, data: { teamRegistrationToken: newToken, teamRegistrationActive: true } },
+    });
+    await saveTournamentToken({
+      token: newToken,
+      tournamentId: tournament.id,
+      name: tournament.name,
+      sport: tournament.sport,
+      type: tournament.type,
+      playerLimit: tournament.playerLimit || 30,
     });
   }
 

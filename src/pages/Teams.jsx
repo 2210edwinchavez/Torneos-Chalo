@@ -1211,12 +1211,11 @@ function TeamRegistrationModal({ team, tournament, dispatch, onClose }) {
   );
 }
 
-/* ─── Team Card ─── */
-function TeamCard({ team, tournament, dispatch }) {
-  const [showPlayers, setShowPlayers] = useState(false);
+/* ─── Team Detail Modal ─── */
+function TeamDetailModal({ team, tournament, dispatch, onClose }) {
   const [showEnroll, setShowEnroll] = useState(false);
-  const [deleteTeamConfirm, setDeleteTeamConfirm] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const { state } = useTournament();
   const { isAdmin } = useAuth();
 
@@ -1226,185 +1225,180 @@ function TeamCard({ team, tournament, dispatch }) {
   const isFull = enrollments.length >= playerLimit;
 
   const stats = (() => {
-    const ms = tournament.matches.filter(m => m.status === 'finished' && (m.homeId === team.id || m.awayId === team.id));
-    let w = 0, d = 0, l = 0, gf = 0;
+    const ms = tournament.matches.filter(
+      m => m.status === 'finished' && (m.homeId === team.id || m.awayId === team.id)
+    );
+    let w = 0, d = 0, l = 0, gf = 0, gc = 0;
     ms.forEach(m => {
       const isHome = m.homeId === team.id;
       const myG = isHome ? Number(m.homeScore) : Number(m.awayScore);
       const theirG = isHome ? Number(m.awayScore) : Number(m.homeScore);
-      gf += myG;
+      gf += myG; gc += theirG;
       if (myG > theirG) w++; else if (myG === theirG) d++; else l++;
     });
-    return { pj: ms.length, w, d, l, gf };
+    return { pj: ms.length, w, d, l, gf, gc };
   })();
 
-  const paidCount = enrollments.filter(e => {
-    const s = getPaymentStatus(e.payment);
-    return s.pct === 100;
-  }).length;
+  const paidCount = enrollments.filter(e => getPaymentStatus(e.payment).pct === 100).length;
+
+  function handleDelete() {
+    dispatch({ type: 'DELETE_TEAM', payload: { tournamentId: tournament.id, teamId: team.id } });
+    onClose();
+  }
 
   return (
     <>
-      <div className="card" style={{ borderTop: `3px solid ${color}` }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+      <Modal
+        title={team.name}
+        onClose={onClose}
+        footer={
+          <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {isAdmin && (
+                <>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    title="Enlace de inscripción"
+                    style={{ position: 'relative' }}
+                    onClick={() => setShowRegistration(true)}
+                  >
+                    🔗 Enlace
+                    {team.registrationActive && (
+                      <span style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: 'var(--success)', boxShadow: '0 0 6px var(--success)',
+                        border: '1.5px solid var(--bg-card)',
+                      }} />
+                    )}
+                  </button>
+                  <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(true)}>🗑 Eliminar</button>
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+              {isAdmin && (
+                isFull ? (
+                  <span style={{ fontSize: '0.78rem', color: 'var(--danger)', fontWeight: 700, alignSelf: 'center' }}>
+                    🔒 Completo
+                  </span>
+                ) : (
+                  <button className="btn btn-primary" onClick={() => setShowEnroll(true)}>
+                    + Inscribir jugador
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        }
+      >
+        {/* Team header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20,
+          padding: 16, background: 'var(--bg-card2)', borderRadius: 12,
+          borderLeft: `4px solid ${color}`,
+        }}>
           {team.shield ? (
             <img
               src={team.shield}
-              alt={`Escudo ${team.name}`}
-              style={{
-                width: 54, height: 54, objectFit: 'contain', flexShrink: 0,
-                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
-              }}
+              alt=""
+              style={{ width: 76, height: 76, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}
             />
           ) : (
-            <div className="team-avatar" style={{ width: 54, height: 54, fontSize: '1rem', fontWeight: 800, background: color + '22', color }}>
+            <div className="team-avatar" style={{ width: 76, height: 76, fontSize: '1.3rem', fontWeight: 800, background: color + '22', color, flexShrink: 0 }}>
               {getInitials(team.name)}
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{team.name}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 1 }}>
-              {team.shortName && <span className="pill" style={{ marginRight: 4 }}>{team.shortName}</span>}
-              {team.city}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {/* Enlace de inscripción — visible para todos, activable solo por admin */}
-            <button
-              className="btn btn-secondary btn-icon btn-sm"
-              onClick={() => setShowRegistration(true)}
-              title="Enlace de inscripción"
-              style={{ position: 'relative' }}
-            >
-              🔗
-              {team.registrationActive && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -4,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: 'var(--success)',
-                  boxShadow: '0 0 6px var(--success)',
-                  border: '1.5px solid var(--bg-card)',
-                }} />
-              )}
-            </button>
-            {isAdmin && <button className="btn btn-danger btn-icon btn-sm" onClick={() => setDeleteTeamConfirm(true)} title="Eliminar equipo">🗑</button>}
+            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: 4 }}>{team.name}</div>
+            {team.shortName && (
+              <span className="pill" style={{ marginRight: 6 }}>{team.shortName}</span>
+            )}
+            {team.coach && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 4 }}>👔 {team.coach}</div>}
+            {team.city && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>📍 {team.city}</div>}
           </div>
         </div>
 
-        {team.coach && (
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10 }}>
-            👔 <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{team.coach}</span>
-          </div>
-        )}
-
         {/* Match stats */}
         {stats.pj > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 12 }}>
-            {[{ label: 'PJ', value: stats.pj }, { label: 'G', value: stats.w, color: 'var(--success)' }, { label: 'E', value: stats.d, color: 'var(--warning)' }, { label: 'P', value: stats.l, color: 'var(--danger)' }].map(s => (
-              <div key={s.label} style={{ background: 'var(--bg-card2)', borderRadius: 6, padding: '5px 2px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: s.color || 'var(--text-primary)' }}>{s.value}</div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{s.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 20 }}>
+            {[
+              { label: 'PJ', value: stats.pj },
+              { label: 'G', value: stats.w, color: 'var(--success)' },
+              { label: 'E', value: stats.d, color: 'var(--warning)' },
+              { label: 'P', value: stats.l, color: 'var(--danger)' },
+              { label: 'GF', value: stats.gf },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: '10px 4px', textAlign: 'center', border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: s.color || 'var(--text-primary)' }}>{s.value}</div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Payment summary pill */}
-        {enrollments.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>💳 Pagos:</span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: paidCount === enrollments.length ? 'var(--success)' : 'var(--warning)' }}>
-              {paidCount}/{enrollments.length} completos
-            </span>
-          </div>
-        )}
-
-        {/* Players toggle */}
-        <button
-          className="btn btn-secondary w-full"
-          style={{ justifyContent: 'space-between', padding: '8px 12px' }}
-          onClick={() => setShowPlayers(v => !v)}
-        >
-          <span>
-            👥 Jugadores
+        {/* Players section */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              👥 Jugadores
+            </div>
             <span style={{
-              marginLeft: 8, borderRadius: 99, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700,
+              padding: '2px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700,
               background: isFull ? 'rgba(239,68,68,0.15)' : color + '33',
               color: isFull ? 'var(--danger)' : color,
             }}>
-              {enrollments.length}/{playerLimit}
+              {enrollments.length}/{playerLimit}{isFull ? ' · COMPLETO' : ''}
             </span>
-            {isFull && <span style={{ marginLeft: 6, fontSize: '0.68rem', color: 'var(--danger)', fontWeight: 700 }}>COMPLETO</span>}
-          </span>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{showPlayers ? '▲' : '▼'}</span>
-        </button>
-
-        {/* Players panel */}
-        {showPlayers && (
-          <div className="players-panel">
-            {/* Barra de progreso del límite */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 4 }}>
-                <span>Cupo del equipo</span>
-                <span style={{ fontWeight: 700, color: isFull ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                  {enrollments.length} / {playerLimit} jugadores
-                </span>
-              </div>
-              <div style={{ background: 'var(--bg-card)', borderRadius: 99, height: 6, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${Math.min((enrollments.length / playerLimit) * 100, 100)}%`,
-                  background: isFull ? 'var(--danger)' : enrollments.length / playerLimit > 0.8 ? 'var(--warning)' : 'var(--primary)',
-                  borderRadius: 99,
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-            </div>
-
-            {enrollments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '14px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                Sin jugadores inscritos aún
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-                {enrollments.map(enrollment => {
-                  const player = state.globalPlayers.find(p => p.id === enrollment.playerId);
-                  if (!player) return null;
-                  return (
-                    <EnrolledPlayerRow
-                      key={enrollment.id}
-                      enrollment={enrollment}
-                      player={player}
-                      tournamentId={tournament.id}
-                      teamId={team.id}
-                      inscriptionFee={tournament.inscriptionFee || 0}
-                      dispatch={dispatch}
-                    />
-                  );
-                })}
-              </div>
-            )}
-            {isAdmin && (
-              isFull ? (
-                <div style={{
-                  textAlign: 'center', padding: '10px 14px', borderRadius: 8,
-                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                  color: 'var(--danger)', fontSize: '0.82rem', fontWeight: 600,
-                }}>
-                  🔒 Equipo completo — límite de {playerLimit} jugadores alcanzado
-                </div>
-              ) : (
-                <button className="btn btn-primary w-full" onClick={() => setShowEnroll(true)}>
-                  + Inscribir jugador
-                </button>
-              )
-            )}
           </div>
-        )}
-      </div>
 
-      {/* Enroll modal */}
+          {/* Progress bar */}
+          <div style={{ background: 'var(--bg-card)', borderRadius: 99, height: 5, overflow: 'hidden', marginBottom: 12 }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min((enrollments.length / playerLimit) * 100, 100)}%`,
+              background: isFull ? 'var(--danger)' : enrollments.length / playerLimit > 0.8 ? 'var(--warning)' : 'var(--primary)',
+              borderRadius: 99,
+              transition: 'width 0.3s ease',
+            }} />
+          </div>
+
+          {enrollments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Sin jugadores inscritos aún
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {enrollments.map(enrollment => {
+                const player = state.globalPlayers.find(p => p.id === enrollment.playerId);
+                if (!player) return null;
+                return (
+                  <EnrolledPlayerRow
+                    key={enrollment.id}
+                    enrollment={enrollment}
+                    player={player}
+                    tournamentId={tournament.id}
+                    teamId={team.id}
+                    inscriptionFee={tournament.inscriptionFee || 0}
+                    dispatch={dispatch}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {enrollments.length > 0 && isAdmin && (
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-card2)', border: '1px solid var(--border)', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
+              💳 Pagos:
+              <strong style={{ color: paidCount === enrollments.length ? 'var(--success)' : 'var(--warning)' }}>
+                {paidCount}/{enrollments.length} completos
+              </strong>
+            </div>
+          )}
+        </div>
+      </Modal>
+
       {showEnroll && (
         <EnrollModal
           team={team}
@@ -1415,15 +1409,23 @@ function TeamCard({ team, tournament, dispatch }) {
         />
       )}
 
-      {/* Delete team confirm */}
-      {deleteTeamConfirm && (
+      {showRegistration && (
+        <TeamRegistrationModal
+          team={team}
+          tournament={tournament}
+          dispatch={dispatch}
+          onClose={() => setShowRegistration(false)}
+        />
+      )}
+
+      {deleteConfirm && (
         <Modal
           title="Eliminar equipo"
-          onClose={() => setDeleteTeamConfirm(false)}
+          onClose={() => setDeleteConfirm(false)}
           footer={
             <>
-              <button className="btn btn-secondary" onClick={() => setDeleteTeamConfirm(false)}>Cancelar</button>
-              <button className="btn btn-danger" onClick={() => dispatch({ type: 'DELETE_TEAM', payload: { tournamentId: tournament.id, teamId: team.id } })}>Eliminar</button>
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(false)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={handleDelete}>Eliminar</button>
             </>
           }
         >
@@ -1433,14 +1435,72 @@ function TeamCard({ team, tournament, dispatch }) {
           </p>
         </Modal>
       )}
+    </>
+  );
+}
 
-      {/* Registration link modal */}
-      {showRegistration && (
-        <TeamRegistrationModal
+/* ─── Team Tile (clickable) ─── */
+function TeamTile({ team, tournament, dispatch }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const { isAdmin } = useAuth();
+
+  const color = getTeamColor(team.colorIndex);
+  const enrollments = team.enrollments || [];
+  const playerLimit = tournament.playerLimit || 25;
+  const isFull = enrollments.length >= playerLimit;
+  const paidCount = enrollments.filter(e => getPaymentStatus(e.payment).pct === 100).length;
+
+  return (
+    <>
+      <button
+        type="button"
+        className="team-tile-btn"
+        style={{ borderTop: `3px solid ${color}` }}
+        onClick={() => setShowDetail(true)}
+      >
+        {team.shield ? (
+          <img
+            src={team.shield}
+            alt={team.name}
+            style={{ width: 68, height: 68, objectFit: 'contain', filter: 'drop-shadow(0 3px 10px rgba(0,0,0,0.45))' }}
+          />
+        ) : (
+          <div className="team-avatar" style={{ width: 68, height: 68, fontSize: '1.1rem', fontWeight: 800, background: color + '22', color }}>
+            {getInitials(team.name)}
+          </div>
+        )}
+        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.3, marginTop: 4 }}>
+          {team.name}
+        </div>
+        {team.city && (
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>📍 {team.city}</div>
+        )}
+        <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span style={{
+            padding: '2px 10px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 700,
+            background: isFull ? 'rgba(239,68,68,0.15)' : color + '22',
+            color: isFull ? 'var(--danger)' : color,
+          }}>
+            👥 {enrollments.length}/{playerLimit}
+          </span>
+          {enrollments.length > 0 && isAdmin && (
+            <span style={{
+              padding: '2px 10px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 700,
+              background: paidCount === enrollments.length ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+              color: paidCount === enrollments.length ? 'var(--success)' : 'var(--warning)',
+            }}>
+              💳 {paidCount}/{enrollments.length}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {showDetail && (
+        <TeamDetailModal
           team={team}
           tournament={tournament}
           dispatch={dispatch}
-          onClose={() => setShowRegistration(false)}
+          onClose={() => setShowDetail(false)}
         />
       )}
     </>
@@ -1538,9 +1598,9 @@ export default function Teams() {
           {isAdmin && <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={() => setShowTeamModal(true)}>+ Agregar primer equipo</button>}
         </div>
       ) : (
-        <div className="teams-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
+        <div className="teams-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))', gap: 16 }}>
           {filtered.map(team => (
-            <TeamCard key={team.id} team={team} tournament={activeTournament} dispatch={dispatch} />
+            <TeamTile key={team.id} team={team} tournament={activeTournament} dispatch={dispatch} />
           ))}
         </div>
       )}

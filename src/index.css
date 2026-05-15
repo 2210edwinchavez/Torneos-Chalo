@@ -1630,15 +1630,16 @@ button.tournament-card-shield-btn:active {
   filter: drop-shadow(0 6px 18px rgba(132, 204, 22, 0.35));
 }
 
-/* Inicio sencillo — panel claro tipo dashboard */
+/* Inicio sencillo — panel tipo dashboard */
 .dashboard-simple {
   max-width: 520px;
   margin: 0 auto;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   padding: 28px 24px 32px;
-  color: #0f172a;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
 .dashboard-simple-new {
@@ -1680,12 +1681,12 @@ button.tournament-card-shield-btn:active {
 }
 
 .dashboard-simple-row-wrap:hover {
-  background: #f1f5f9;
+  background: var(--bg-card2);
 }
 
 .dashboard-simple-row-wrap.is-active {
-  background: #e8eef7;
-  border-color: rgba(26, 45, 74, 0.18);
+  background: rgba(132, 204, 22, 0.08);
+  border-color: rgba(132, 204, 22, 0.25);
 }
 
 .dashboard-simple-row {
@@ -1725,7 +1726,7 @@ button.tournament-card-shield-btn:active {
 .dashboard-simple-row-title {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1734,7 +1735,7 @@ button.tournament-card-shield-btn:active {
 
 .dashboard-simple-row-sub {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1744,7 +1745,7 @@ button.tournament-card-shield-btn:active {
 .dashboard-simple-meta {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--primary-light);
   flex-shrink: 0;
 }
 
@@ -1753,7 +1754,7 @@ button.tournament-card-shield-btn:active {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
   line-height: 0;
   flex-shrink: 0;
@@ -1761,8 +1762,8 @@ button.tournament-card-shield-btn:active {
 }
 
 .dashboard-simple-dup:hover {
-  color: #1a2d4a;
-  background: rgba(26, 45, 74, 0.08);
+  color: var(--text-primary);
+  background: var(--bg-card2);
 }
 
 .dashboard-simple-empty {
@@ -1772,7 +1773,61 @@ button.tournament-card-shield-btn:active {
 
 .dashboard-simple-empty-note {
   font-size: 0.88rem;
-  color: #64748b;
+  color: var(--text-muted);
   line-height: 1.55;
   margin-top: 8px;
+}
+
+/* Team tile — clickable card in the teams grid */
+.team-tile-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  font: inherit;
+  color: inherit;
+}
+
+.team-tile-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card2);
+}
+
+/* Logos horizontales en el inicio */
+.dashboard-logos-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.dashboard-logo-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 10px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 0;
+}
+
+.dashboard-logo-btn:hover {
+  transform: scale(1.1);
+  background: rgba(132, 204, 22, 0.08);
+  border-color: rgba(132, 204, 22, 0.35);
+}
+
+.dashboard-logo-btn.is-active {
+  border-color: rgba(132, 204, 22, 0.6);
+  background: rgba(132, 204, 22, 0.1);
 }

@@ -5,9 +5,168 @@ import { useAuth } from '../context/AuthContext';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
 import { formatDate, getTeamColor, getInitials, calcStandings } from '../utils/helpers';
 
+/* ─── Team Detail View (dentro de TournamentDetailModal) ─── */
+function TeamDetailView({ team, tournament, onBack }) {
+  const { state } = useTournament();
+  const color = getTeamColor(team.colorIndex);
+  const enrollments = team.enrollments || [];
+  const playerLimit = tournament.playerLimit || 25;
+  const isFull = enrollments.length >= playerLimit;
+
+  const stats = (() => {
+    const ms = tournament.matches.filter(
+      m => m.status === 'finished' && (m.homeId === team.id || m.awayId === team.id)
+    );
+    let w = 0, d = 0, l = 0, gf = 0;
+    ms.forEach(m => {
+      const isHome = m.homeId === team.id;
+      const myG = isHome ? Number(m.homeScore) : Number(m.awayScore);
+      const theirG = isHome ? Number(m.awayScore) : Number(m.homeScore);
+      gf += myG;
+      if (myG > theirG) w++; else if (myG === theirG) d++; else l++;
+    });
+    return { pj: ms.length, w, d, l, gf };
+  })();
+
+  return (
+    <div>
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600,
+          padding: '0 0 16px', transition: 'color 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+      >
+        ← Todos los equipos
+      </button>
+
+      {/* Team header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20,
+        padding: 16, background: 'var(--bg-card2)', borderRadius: 12,
+        borderLeft: `4px solid ${color}`,
+      }}>
+        {team.shield ? (
+          <img src={team.shield} alt="" style={{ width: 72, height: 72, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }} />
+        ) : (
+          <div className="team-avatar" style={{ width: 72, height: 72, fontSize: '1.2rem', fontWeight: 800, background: color + '22', color, flexShrink: 0 }}>
+            {getInitials(team.name)}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: 4 }}>{team.name}</div>
+          {team.coach && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>👔 {team.coach}</div>}
+          {team.city && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>📍 {team.city}</div>}
+        </div>
+      </div>
+
+      {/* Stats */}
+      {stats.pj > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+          {[
+            { label: 'PJ', value: stats.pj },
+            { label: 'G', value: stats.w, color: 'var(--success)' },
+            { label: 'E', value: stats.d, color: 'var(--warning)' },
+            { label: 'P', value: stats.l, color: 'var(--danger)' },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'var(--bg-card2)', borderRadius: 8, padding: '10px 4px', textAlign: 'center', border: '1px solid var(--border)' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: s.color || 'var(--text-primary)' }}>{s.value}</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Players */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            👥 Jugadores
+          </div>
+          <span style={{
+            padding: '2px 10px', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700,
+            background: isFull ? 'rgba(239,68,68,0.15)' : color + '33',
+            color: isFull ? 'var(--danger)' : color,
+          }}>
+            {enrollments.length}/{playerLimit}{isFull ? ' · COMPLETO' : ''}
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ background: 'var(--bg-card)', borderRadius: 99, height: 5, overflow: 'hidden', marginBottom: 14 }}>
+          <div style={{
+            height: '100%',
+            width: `${Math.min((enrollments.length / playerLimit) * 100, 100)}%`,
+            background: isFull ? 'var(--danger)' : enrollments.length / playerLimit > 0.8 ? 'var(--warning)' : 'var(--primary)',
+            borderRadius: 99,
+          }} />
+        </div>
+
+        {enrollments.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Sin jugadores inscritos aún
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {enrollments.map((enrollment, idx) => {
+              const player = state.globalPlayers.find(p => p.id === enrollment.playerId);
+              if (!player) return null;
+              const fullName = `${player.firstName} ${player.lastName}`;
+              const age = player.birthDate
+                ? Math.floor((Date.now() - new Date(player.birthDate)) / (365.25 * 24 * 3600 * 1000))
+                : null;
+              return (
+                <div
+                  key={enrollment.id || idx}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 10,
+                    background: 'var(--bg-card2)', border: '1px solid var(--border)',
+                  }}
+                >
+                  {player.photo ? (
+                    <img src={player.photo} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
+                  ) : (
+                    <div style={{
+                      width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                      background: color + '22', color, fontWeight: 800, fontSize: '0.8rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {getInitials(fullName)}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {enrollment.shirtNumber && (
+                        <span style={{ color, fontWeight: 800, marginRight: 5 }}>#{enrollment.shirtNumber}</span>
+                      )}
+                      {fullName}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', gap: 8, marginTop: 1 }}>
+                      {player.docNumber && <span>📄 {player.docNumber}</span>}
+                      {age !== null && <span>🎂 {age} años</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Tournament Detail Modal (para usuarios) ─── */
 function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
   const [tab, setTab] = useState('info');
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const standings = useMemo(() => calcStandings(tournament.teams, tournament.matches), [tournament]);
   const color = '#84cc16';
 
@@ -55,7 +214,7 @@ function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
               {id:'partidos', label:`⚽ Partidos (${tournament.matches.length})`},
               ...(tournament.type==='league' ? [{id:'posiciones',label:'📊 Posiciones'}] : []),
             ].map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
+              <button key={t.id} onClick={() => { setTab(t.id); setSelectedTeam(null); }} style={{
                 padding:'8px 14px', border:'none', cursor:'pointer',
                 borderRadius:'8px 8px 0 0', fontWeight:700, fontSize:'0.78rem',
                 background: tab===t.id ? 'var(--bg)' : 'transparent',
@@ -111,65 +270,51 @@ function TournamentDetailModal({ tournament, colorIndex = 0, onClose }) {
 
           {/* ── Equipos ── */}
           {tab==='equipos' && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,260px),1fr))', gap:12 }}>
-              {tournament.teams.length === 0 && (
-                <div style={{ color:'var(--text-muted)',fontSize:'0.85rem',gridColumn:'1/-1',textAlign:'center',padding:'30px 0' }}>Sin equipos registrados</div>
-              )}
-              {tournament.teams.map((team, i) => {
-                const tc = getTeamColor(team.colorIndex);
-                const ms = tournament.matches.filter(m => m.status==='finished' && (m.homeId===team.id||m.awayId===team.id));
-                let w=0,d=0,l=0;
-                ms.forEach(m => {
-                  const isH = m.homeId===team.id;
-                  const mg = isH?Number(m.homeScore):Number(m.awayScore);
-                  const tg = isH?Number(m.awayScore):Number(m.homeScore);
-                  if(mg>tg)w++; else if(mg===tg)d++; else l++;
-                });
-                return (
-                  <div key={team.id} className="card" style={{ borderTop:`3px solid ${tc}` }}>
-                    <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:10 }}>
-                      {team.shield
-                        ? <img src={team.shield} style={{ width:48,height:48,objectFit:'contain',filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }} alt="" />
-                        : <div className="team-avatar" style={{ width:48,height:48,background:tc+'22',color:tc,fontWeight:800 }}>{getInitials(team.name)}</div>
-                      }
-                      <div>
-                        <div style={{ fontWeight:700,color:'var(--text-primary)' }}>{team.name}</div>
-                        {team.coach && <div style={{ fontSize:'0.72rem',color:'var(--text-muted)' }}>👔 {team.coach}</div>}
-                        {team.city && <div style={{ fontSize:'0.72rem',color:'var(--text-muted)' }}>📍 {team.city}</div>}
-                      </div>
-                    </div>
-                    {ms.length > 0 && (
-                      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4,marginBottom:10 }}>
-                        {[{l:'PJ',v:ms.length},{l:'G',v:w,c:'var(--success)'},{l:'E',v:d,c:'var(--warning)'},{l:'P',v:l,c:'var(--danger)'}].map(s=>(
-                          <div key={s.l} style={{ background:'var(--bg-card2)',borderRadius:6,padding:'4px 2px',textAlign:'center' }}>
-                            <div style={{ fontSize:'0.9rem',fontWeight:800,color:s.c||'var(--text-primary)' }}>{s.v}</div>
-                            <div style={{ fontSize:'0.58rem',color:'var(--text-muted)',textTransform:'uppercase' }}>{s.l}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {/* Jugadores */}
-                    {(team.enrollments||[]).length > 0 && (
-                      <div>
-                        <div style={{ fontSize:'0.68rem',fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6 }}>
-                          👥 {team.enrollments.length} jugadores
-                        </div>
-                        <div style={{ display:'flex',flexWrap:'wrap',gap:4 }}>
-                          {team.enrollments.slice(0,8).map(e => (
-                            <span key={e.id} style={{ fontSize:'0.68rem',background:'var(--bg-card2)',borderRadius:99,padding:'2px 7px',color:'var(--text-secondary)',border:'1px solid var(--border)' }}>
-                              {e.shirtNumber?`#${e.shirtNumber} `:''}
-                            </span>
-                          ))}
-                          {team.enrollments.length > 8 && (
-                            <span style={{ fontSize:'0.68rem',color:'var(--text-muted)' }}>+{team.enrollments.length-8} más</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
+            selectedTeam ? (
+              /* ── Detalle del equipo seleccionado ── */
+              <TeamDetailView
+                team={selectedTeam}
+                tournament={tournament}
+                onBack={() => setSelectedTeam(null)}
+              />
+            ) : (
+              /* ── Grid de equipos clickeables ── */
+              <div>
+                {tournament.teams.length === 0 ? (
+                  <div style={{ color:'var(--text-muted)',fontSize:'0.85rem',textAlign:'center',padding:'30px 0' }}>Sin equipos registrados</div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,150px),1fr))', gap:12 }}>
+                    {tournament.teams.map((team, i) => {
+                      const tc = getTeamColor(team.colorIndex);
+                      const enrollments = team.enrollments || [];
+                      const playerLimit = tournament.playerLimit || 25;
+                      return (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onClick={() => setSelectedTeam(team)}
+                          className="team-tile-btn"
+                          style={{ borderTop:`3px solid ${tc}` }}
+                        >
+                          {team.shield
+                            ? <img src={team.shield} style={{ width:60,height:60,objectFit:'contain',filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.4))' }} alt="" />
+                            : <div className="team-avatar" style={{ width:60,height:60,background:tc+'22',color:tc,fontWeight:800,fontSize:'1rem' }}>{getInitials(team.name)}</div>
+                          }
+                          <div style={{ fontWeight:700,fontSize:'0.85rem',color:'var(--text-primary)',lineHeight:1.3,marginTop:4 }}>{team.name}</div>
+                          {team.city && <div style={{ fontSize:'0.68rem',color:'var(--text-muted)',marginTop:1 }}>📍 {team.city}</div>}
+                          <span style={{
+                            marginTop:6, padding:'2px 8px', borderRadius:99, fontSize:'0.68rem', fontWeight:700,
+                            background: tc+'22', color: tc,
+                          }}>
+                            👥 {enrollments.length}/{playerLimit}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            )
           )}
 
           {/* ── Partidos ── */}
@@ -325,7 +470,7 @@ function UserDashboard({ tournaments, session }) {
     return (
       <div className="dashboard-simple">
         <div className="dashboard-simple-empty">
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             Hola, {session?.name || 'invitado'}
           </h2>
           <p className="dashboard-simple-empty-note">
@@ -338,23 +483,16 @@ function UserDashboard({ tournaments, session }) {
 
   return (
     <div className="dashboard-simple">
-      <div className="dashboard-simple-rows">
+      <div className="dashboard-logos-row">
         {tournaments.map((t, i) => (
           <button
             key={t.id}
             type="button"
-            className="dashboard-simple-row"
-            style={{ width: '100%', borderRadius: 12 }}
+            className="dashboard-logo-btn"
+            title={t.name}
             onClick={() => setSelected(t)}
           >
-            <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
-            <div className="dashboard-simple-row-titles">
-              <div className="dashboard-simple-row-title">{t.name}</div>
-              <div className="dashboard-simple-row-sub">
-                {t.sport} · {t.type === 'league' ? 'Liga' : 'Eliminación'}
-              </div>
-            </div>
-            <span className="dashboard-simple-meta">{t.teams.length} equipos</span>
+            <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={72} />
           </button>
         ))}
       </div>
@@ -382,7 +520,7 @@ export default function Dashboard() {
     return (
       <div className="dashboard-simple">
         <div className="dashboard-simple-empty">
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
             Bienvenido{session?.name ? `, ${session.name}` : ''}
           </h2>
           <p className="dashboard-simple-empty-note">
@@ -398,47 +536,25 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-simple">
-      <Link to="/torneos" className="dashboard-simple-new">
-        + Nuevo torneo
-      </Link>
-      <div className="dashboard-simple-rows">
+      <div className="dashboard-logos-row">
         {state.tournaments.map((t, i) => (
-          <div
+          <button
             key={t.id}
-            className={`dashboard-simple-row-wrap${t.id === activeTournament?.id ? ' is-active' : ''}`}
+            type="button"
+            className={`dashboard-logo-btn${t.id === activeTournament?.id ? ' is-active' : ''}`}
+            title={t.name}
+            onClick={() => {
+              dispatch({ type: 'SET_ACTIVE_TOURNAMENT', payload: t.id });
+              navigate('/torneos');
+            }}
           >
-            <button
-              type="button"
-              className="dashboard-simple-row"
-              onClick={() => {
-                dispatch({ type: 'SET_ACTIVE_TOURNAMENT', payload: t.id });
-                navigate('/torneos');
-              }}
-            >
-              <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={52} />
-              <div className="dashboard-simple-row-titles">
-                <div className="dashboard-simple-row-title">{t.name}</div>
-                <div className="dashboard-simple-row-sub">
-                  {t.sport} · {t.type === 'league' ? 'Liga' : 'Eliminación'}
-                </div>
-              </div>
-              <span className="dashboard-simple-meta">{t.teams.length} equipos</span>
-            </button>
-            <button
-              type="button"
-              className="dashboard-simple-dup"
-              title="Duplicar plantilla (sin equipos ni partidos)"
-              aria-label="Duplicar torneo"
-              onClick={() => {
-                dispatch({ type: 'DUPLICATE_TOURNAMENT', payload: t.id });
-                navigate('/torneos');
-              }}
-            >
-              <DupIcon />
-            </button>
-          </div>
+            <TournamentShieldThumb shield={t.shield} sport={t.sport} colorIndex={i} size={72} />
+          </button>
         ))}
       </div>
+      <Link to="/torneos" className="dashboard-simple-new" style={{ marginTop: 28 }}>
+        + Nuevo torneo
+      </Link>
     </div>
   );
 }

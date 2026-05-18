@@ -110,6 +110,7 @@ export default function TeamSelfRegistration() {
   const [tournament, setTournament] = useState(null);
   const [step, setStep] = useState(1); // 1: team info, 2: players
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const playerLimit = tournament?.playerLimit || 30;
 
@@ -148,6 +149,7 @@ export default function TeamSelfRegistration() {
     if (validPlayers.length === 0) { alert('Agrega al menos 1 jugador con nombre y apellido.'); return; }
 
     setSubmitting(true);
+    setSubmitError('');
     const { error } = await submitTeamRegistration({
       token,
       tournamentId: tournament.id,
@@ -157,7 +159,7 @@ export default function TeamSelfRegistration() {
       },
     });
     setSubmitting(false);
-    if (error) { setStatus('error'); return; }
+    if (error) { setSubmitError(error); setStatus('error'); return; }
     setStatus('submitted');
   }
 
@@ -209,7 +211,10 @@ export default function TeamSelfRegistration() {
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>❌</div>
           <h2 style={{ color: '#ef4444', marginBottom: 8 }}>Error al enviar</h2>
           <p style={{ color: '#7a9a72', fontSize: '0.9rem' }}>Ocurrió un error. Intenta de nuevo.</p>
-          <button onClick={() => setStatus('ready')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, background: '#84cc16', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+          {submitError && (
+            <p style={{ color: '#a1b89a', fontSize: '0.75rem', marginTop: 10, wordBreak: 'break-word' }}>{submitError}</p>
+          )}
+          <button onClick={() => { setSubmitError(''); setStatus('ready'); }} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, background: '#84cc16', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
             Intentar de nuevo
           </button>
         </div>

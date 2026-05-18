@@ -5,7 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { getTeamColor, getInitials, formatDate, compressImage } from '../utils/helpers';
+import {
+  getTeamColor, getInitials, formatDate, compressImage,
+  isSubmissionPending, isSubmissionApproved, isSubmissionRejected,
+} from '../utils/helpers';
 import { loadPendingSubmissions, updateSubmissionStatus, supabaseConfigured } from '../lib/supabase';
 import {
   PAYMENT_LLAVE,
@@ -1024,9 +1027,9 @@ function TeamRegistrationModal({ team, tournament, dispatch, onClose }) {
     setProcessingId(null);
   }
 
-  const pending = submissions.filter(s => s.status === 'pending');
-  const approved = submissions.filter(s => s.status === 'approved');
-  const rejected = submissions.filter(s => s.status === 'rejected');
+  const pending = submissions.filter(s => isSubmissionPending(s.status));
+  const approved = submissions.filter(s => isSubmissionApproved(s.status));
+  const rejected = submissions.filter(s => isSubmissionRejected(s.status));
 
   return (
     <Modal

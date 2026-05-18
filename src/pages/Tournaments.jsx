@@ -4,7 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import Modal from '../components/Modal';
 import TournamentShieldThumb from '../components/TournamentShieldThumb';
-import { formatDate, compressImage, getInitials, getTeamColor } from '../utils/helpers';
+import {
+  formatDate, compressImage, getInitials, getTeamColor,
+  isSubmissionPending, isSubmissionApproved, isSubmissionRejected,
+} from '../utils/helpers';
 import { loadTeamSubmissions, updateTeamSubmissionStatus, supabaseConfigured, saveTournamentToken, deactivateTournamentToken } from '../lib/supabase';
 
 const SPORTS = ['Fútbol', 'Baloncesto', 'Tenis', 'Voleibol', 'Béisbol', 'Otro'];
@@ -541,9 +544,11 @@ function TournamentModal({ editId, form, setForm, onClose, onSubmit }) {
 
 /* ─── Modal de enlace de inscripción de equipos ─── */
 function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
+  const { isGuest, isSupabaseAuth } = useAuth();
   const [copyOk, setCopyOk] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [processingId, setProcessingId] = useState(null);
 
   const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
@@ -609,18 +614,29 @@ function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
   }
 
   const loadSubs = useCallback(async () => {
-    if (!tournament.teamRegistrationToken || !supabaseConfigured) return;
+    if (!supabaseConfigured) return;
+    if (!isSupabaseAuth) {
+      setSubmissions([]);
+      setLoadError('');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const data = await loadTeamSubmissions(tournament.teamRegistrationToken);
+    setLoadError('');
+    const { data, error } = await loadTeamSubmissions(
+      tournament.teamRegistrationToken,
+      tournament.id,
+    );
     setSubmissions(data);
+    setLoadError(error || '');
     setLoading(false);
-  }, [tournament.teamRegistrationToken]);
+  }, [tournament.teamRegistrationToken, tournament.id, isSupabaseAuth]);
 
   useEffect(() => { loadSubs(); }, [loadSubs]);
 
-  const pending = submissions.filter(s => s.status === 'pending');
-  const approved = submissions.filter(s => s.status === 'approved');
-  const rejected = submissions.filter(s => s.status === 'rejected');
+  const pending = submissions.filter(s => isSubmissionPending(s.status));
+  const approved = submissions.filter(s => isSubmissionApproved(s.status));
+  const rejected = submissions.filter(s => isSubmissionRejected(s.status));
 
   async function handleApprove(sub) {
     setProcessingId(sub.id);
@@ -712,6 +728,16 @@ function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
       {/* Solicitudes pendientes */}
       {supabaseConfigured && tournament.teamRegistrationToken && (
         <div>
+          {(isGuest || !isSupabaseAuth) && (
+            <div style={{
+              marginBottom: 12, padding: '12px 14px', borderRadius: 10,
+              background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)',
+              fontSize: '0.8rem', color: 'var(--warning)', lineHeight: 1.5,
+            }}>
+              Para ver y aprobar solicitudes debes <strong>iniciar sesión con email</strong> (no como visitante).
+              Las inscripciones del enlace público sí se guardan en la base de datos.
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Equipos pendientes de aprobación
@@ -728,6 +754,10 @@ function TeamRegistrationLinkModal({ tournament, dispatch, onClose }) {
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Cargando…</div>
+          ) : loadError ? (
+            <div style={{ textAlign: 'center', padding: '16px 0', color: '#ef4444', fontSize: '0.82rem' }}>
+              No se pudieron cargar las solicitudes: {loadError}
+            </div>
           ) : pending.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>No hay solicitudes pendientes</div>
           ) : (

@@ -193,6 +193,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       session, isAdmin, isLoggedIn, isGuest,
+      isSupabaseAuth: !!supaSession,
       user: supaSession?.user,
       signUpWithEmail, signInWithEmail,
       signInWithGoogle,

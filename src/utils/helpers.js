@@ -152,3 +152,19 @@ export function getRoundName(round, totalRounds) {
   if (diff === 3) return 'Octavos de final';
   return `Ronda ${round}`;
 }
+
+/** Estados de solicitudes (inglés en código; algunas filas en BD pueden estar en español) */
+export function isSubmissionPending(status) {
+  const s = (status || '').toLowerCase();
+  return s === 'pending' || s === 'pendiente';
+}
+
+export function isSubmissionApproved(status) {
+  const s = (status || '').toLowerCase();
+  return s === 'approved' || s === 'aprobado' || s === 'aprobada';
+}
+
+export function isSubmissionRejected(status) {
+  const s = (status || '').toLowerCase();
+  return s === 'rejected' || s === 'rechazado' || s === 'rechazada';
+}

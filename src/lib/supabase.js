@@ -165,15 +165,27 @@ export async function submitTeamRegistration({ token, tournamentId, teamData }) 
   return { error: error?.message || null };
 }
 
-/** Carga solicitudes de equipo para un token de torneo */
-export async function loadTeamSubmissions(token) {
-  const { data, error } = await supabase
+/** Carga solicitudes de equipo (por torneo; el token puede cambiar si se regenera el enlace) */
+export async function loadTeamSubmissions(token, tournamentId) {
+  let query = supabase
     .from('team_submissions')
     .select('*')
-    .eq('token', token)
     .order('created_at', { ascending: false });
-  if (error) return [];
-  return data || [];
+
+  if (tournamentId) {
+    query = query.eq('tournament_id', tournamentId);
+  } else if (token) {
+    query = query.eq('token', token);
+  } else {
+    return { data: [], error: 'Falta identificador del torneo' };
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error cargando solicitudes de equipo:', error.message);
+    return { data: [], error: error.message };
+  }
+  return { data: data || [], error: null };
 }
 
 /** Cambia el estado de una solicitud de equipo */
